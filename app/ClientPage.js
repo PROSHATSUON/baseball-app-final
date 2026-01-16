@@ -5,6 +5,7 @@ export default function ClientPage({ words }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [expandedId, setExpandedId] = useState(null);
+  const [videoModalUrl, setVideoModalUrl] = useState(null); // 動画ポップアップ用
 
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
@@ -19,6 +20,7 @@ export default function ClientPage({ words }) {
     });
   }, [searchQuery, selectedGenre, words]);
 
+  // 音声再生
   const playAudio = (e, rawUrl) => {
     e.stopPropagation();
     if (!rawUrl) return;
@@ -37,6 +39,14 @@ export default function ClientPage({ words }) {
     audio.autoplay = true;
     audio.onended = () => audio.remove();
     document.body.appendChild(audio);
+  };
+
+  // YouTubeのURLから埋め込み用IDを取得する関数
+  const getYoutubeId = (url) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
   };
 
   return (
@@ -120,10 +130,18 @@ export default function ClientPage({ words }) {
                   {item.lastViewed !== '-' && (
                     <div className="text-[10px] text-right text-gray-300 pt-2">Last Check: {item.lastViewed}</div>
                   )}
+                  
+                  {/* 動画ボタン：クリックでポップアップを開く */}
                   {item.videoUrl && (
-                    <a href={item.videoUrl} target="_blank" rel="noopener noreferrer" className="mt-3 flex items-center justify-center w-full py-2.5 bg-red-50 text-red-600 font-bold rounded-lg border border-red-100 hover:bg-red-100 transition-colors">
-                      📺 YouTubeで確認
-                    </a>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setVideoModalUrl(item.videoUrl);
+                      }}
+                      className="mt-3 flex items-center justify-center w-full py-2.5 bg-red-50 text-red-600 font-bold rounded-lg border border-red-100 hover:bg-red-100 transition-colors"
+                    >
+                      📺 動画を再生
+                    </button>
                   )}
                 </div>
               )}
@@ -131,6 +149,33 @@ export default function ClientPage({ words }) {
           ))
         )}
       </div>
+
+      {/* --- 動画ポップアップ（モーダル） --- */}
+      {videoModalUrl && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn"
+          onClick={() => setVideoModalUrl(null)}
+        >
+          <div className="relative w-full max-w-2xl bg-black rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 aspect-video">
+            <iframe
+              width="100%"
+              height="100%"
+              src={`https://www.youtube.com/embed/${getYoutubeId(videoModalUrl)}?autoplay=1`}
+              title="YouTube video player"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+            <button 
+              onClick={() => setVideoModalUrl(null)}
+              className="absolute top-3 right-3 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 backdrop-blur-md transition-all"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
