@@ -5,7 +5,7 @@ export default function ClientPage({ words }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [expandedId, setExpandedId] = useState(null);
-  const [videoModalUrl, setVideoModalUrl] = useState(null); // 動画ポップアップ用
+  const [videoModalUrl, setVideoModalUrl] = useState(null);
 
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
@@ -20,28 +20,40 @@ export default function ClientPage({ words }) {
     });
   }, [searchQuery, selectedGenre, words]);
 
-  // 音声再生
-  const playAudio = (e, rawUrl) => {
-    e.stopPropagation();
+  // 【修正版】音声再生機能
+  const playAudio = async (e, rawUrl) => {
+    e.stopPropagation(); // 詳細が開くのを防ぐ
     if (!rawUrl) return;
-    const old = document.getElementById('audio-player');
-    if (old) old.remove();
 
+    // GoogleドライブのURLを「再生可能な直リンク」に変換
+    let playUrl = rawUrl;
     let fileId = "";
-    const match1 = rawUrl.match(/id=([a-zA-Z0-9_-]{25,})/);
-    const match2 = rawUrl.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
-    if (match1) fileId = match1[1]; else if (match2) fileId = match2[1];
-    const playUrl = fileId ? `https://docs.google.com/uc?export=download&id=${fileId}` : rawUrl;
+    
+    // パターン1: .../file/d/ID/view...
+    const match1 = rawUrl.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
+    // パターン2: ...id=ID...
+    const match2 = rawUrl.match(/id=([a-zA-Z0-9_-]{25,})/);
 
-    const audio = document.createElement('audio');
-    audio.id = 'audio-player';
-    audio.src = playUrl;
-    audio.autoplay = true;
-    audio.onended = () => audio.remove();
-    document.body.appendChild(audio);
+    if (match1) fileId = match1[1];
+    else if (match2) fileId = match2[1];
+
+    if (fileId) {
+      // Google Driveの直リンク形式
+      playUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    }
+
+    try {
+      const audio = new Audio(playUrl);
+      // 再生ボタンを押したときの「読み込み中」対策
+      audio.crossOrigin = "anonymous"; 
+      await audio.play();
+    } catch (err) {
+      console.error("Audio Error:", err);
+      // エラー時にアラートを出す（デバッグ用）
+      alert("再生できませんでした。\n\n【確認】\n1. Googleドライブの権限が「リンクを知っている全員」になっていますか？\n2. URLは正しいですか？");
+    }
   };
 
-  // YouTubeのURLから埋め込み用IDを取得する関数
   const getYoutubeId = (url) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -98,9 +110,9 @@ export default function ClientPage({ words }) {
                     {item.audioUrl && (
                       <button 
                         onClick={(e) => playAudio(e, item.audioUrl)}
-                        className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-[10px] hover:bg-orange-200"
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-600 text-xs hover:bg-orange-200 active:scale-95 transition-transform"
                       >
-                        ▶
+                        🔊
                       </button>
                     )}
                   </div>
@@ -131,7 +143,6 @@ export default function ClientPage({ words }) {
                     <div className="text-[10px] text-right text-gray-300 pt-2">Last Check: {item.lastViewed}</div>
                   )}
                   
-                  {/* 動画ボタン：クリックでポップアップを開く */}
                   {item.videoUrl && (
                     <button 
                       onClick={(e) => {
@@ -150,7 +161,6 @@ export default function ClientPage({ words }) {
         )}
       </div>
 
-      {/* --- 動画ポップアップ（モーダル） --- */}
       {videoModalUrl && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn"
