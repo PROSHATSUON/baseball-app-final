@@ -13,7 +13,6 @@ export default async function Home() {
   let startCursor = undefined;
 
   try {
-    // データがなくなるまで繰り返し取得するループ（100件の壁を突破）
     while (hasMore) {
       const res = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
         method: 'POST',
@@ -24,8 +23,8 @@ export default async function Home() {
         },
         body: JSON.stringify({
           sorts: [{ property: '単語', direction: 'ascending' }],
-          page_size: 100, // 上限の100件
-          start_cursor: startCursor, // 「続きはここから」という目印
+          page_size: 100,
+          start_cursor: startCursor,
         }),
         next: { revalidate: 0 }
       });
@@ -35,14 +34,24 @@ export default async function Home() {
       const data = await res.json();
       allResults = [...allResults, ...data.results];
       
-      // まだ続きがあるかチェック
       hasMore = data.has_more;
       startCursor = data.next_cursor;
     }
 
-    // 全件取得後にデータを整形
     const results = allResults.map((page) => {
       const p = page.properties;
+      
+      // 【ここが修正ポイント】
+      // 「ファイルとメディア」の場合と「URL」の場合、両方に対応させる
+      let audioLink = '';
+      if (p['音声']?.files?.length > 0) {
+        // ファイルをアップロードした場合ここから取れる
+        audioLink = p['音声'].files[0].file?.url || p['音声'].files[0].external?.url;
+      } else {
+        // 普通のURL列の場合ここから取れる
+        audioLink = p['音声']?.url;
+      }
+
       return {
         id: page.id,
         word: p['単語']?.title?.[0]?.plain_text || 'No Title',
@@ -51,7 +60,7 @@ export default async function Home() {
         katakana: p['カタカナ発音']?.rich_text?.[0]?.plain_text || '',
         genre: p['ジャンル']?.select?.name || 'その他',
         difficulty: p['難易度']?.select?.name || '-',
-        audioUrl: p['音声']?.url || '',
+        audioUrl: audioLink || '', // 強化されたリンク取得ロジック
         memo: p['メモ']?.rich_text?.[0]?.plain_text || '',
         example: p['例文']?.rich_text?.[0]?.plain_text || '',
         lastViewed: p['最終表示日']?.date?.start || '-',
