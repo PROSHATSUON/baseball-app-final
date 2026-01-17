@@ -9,7 +9,6 @@ const SpeakerIcon = () => (
   </svg>
 );
 
-// 例文用の押しやすい再生アイコン（塗りつぶし三角）
 const PlayIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
     <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -38,8 +37,11 @@ const ClockIcon = () => (
 );
 // --------------------
 
-// 【修正】words = [] とすることで、データが空でもエラーを防ぐ
-export default function ClientPage({ words = [] }) {
+export default function ClientPage({ words }) {
+  // 【ここが絶対安全装置】
+  // wordsが空(null/undefined)なら、空の配列[]として扱う
+  const safeWords = Array.isArray(words) ? words : [];
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [expandedId, setExpandedId] = useState(null);
@@ -49,8 +51,8 @@ export default function ClientPage({ words = [] }) {
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
   const filteredWords = useMemo(() => {
-    // 【修正】(words || []) とすることで、安全にフィルターを実行
-    return (words || []).filter((item) => {
+    // safeWordsを使うことでエラーを完全回避
+    return safeWords.filter((item) => {
       const matchGenre = selectedGenre === 'ALL' || item.genre === selectedGenre;
       const matchSearch = 
         item.word.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -58,7 +60,7 @@ export default function ClientPage({ words = [] }) {
         item.katakana.includes(searchQuery);
       return matchGenre && matchSearch;
     });
-  }, [searchQuery, selectedGenre, words]);
+  }, [searchQuery, selectedGenre, safeWords]);
 
   const playAudio = (e, rawUrl) => {
     e.stopPropagation();
@@ -116,7 +118,7 @@ export default function ClientPage({ words = [] }) {
           ))}
         </div>
         <div className="px-4 py-1 text-right text-[10px] text-gray-400">
-          {filteredWords.length} Words Found
+          {safeWords.length} Words Found
         </div>
       </div>
 
