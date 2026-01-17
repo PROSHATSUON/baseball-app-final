@@ -9,7 +9,7 @@ const SpeakerIcon = () => (
   </svg>
 );
 
-// 【新】例文用の押しやすい再生アイコン（塗りつぶし三角）
+// 例文用の押しやすい再生アイコン（塗りつぶし三角）
 const PlayIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
     <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -38,7 +38,8 @@ const ClockIcon = () => (
 );
 // --------------------
 
-export default function ClientPage({ words }) {
+// 【修正】words = [] とすることで、データが空でもエラーを防ぐ
+export default function ClientPage({ words = [] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [expandedId, setExpandedId] = useState(null);
@@ -48,7 +49,8 @@ export default function ClientPage({ words }) {
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
   const filteredWords = useMemo(() => {
-    return words.filter((item) => {
+    // 【修正】(words || []) とすることで、安全にフィルターを実行
+    return (words || []).filter((item) => {
       const matchGenre = selectedGenre === 'ALL' || item.genre === selectedGenre;
       const matchSearch = 
         item.word.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -167,7 +169,6 @@ export default function ClientPage({ words }) {
                            <span className="flex-1 text-slate-700 italic font-medium text-base leading-relaxed">
                              "{item.example}"
                            </span>
-                           {/* 【ここを変更】大きくて押しやすい例文再生ボタン */}
                            {item.exampleAudioUrl && (
                              <button 
                                onClick={(e) => playAudio(e, item.exampleAudioUrl)}
