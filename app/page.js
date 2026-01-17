@@ -1,5 +1,8 @@
 import ClientPage from './ClientPage';
 
+// 【追加】これを書くとビルドエラーが消え、常に最新データを取得するようになります
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const databaseId = process.env.NOTION_DB_ID;
   const apiKey = process.env.NOTION_API_KEY;
@@ -73,7 +76,6 @@ export default async function Home() {
       };
     });
 
-    // 【重要】ここで results || [] とすることで、絶対にnullを渡さない
     return <ClientPage words={results || []} />;
 
   } catch (error) {
