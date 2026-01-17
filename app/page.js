@@ -33,7 +33,6 @@ export default async function Home() {
 
       const data = await res.json();
       allResults = [...allResults, ...data.results];
-      
       hasMore = data.has_more;
       startCursor = data.next_cursor;
     }
@@ -41,15 +40,18 @@ export default async function Home() {
     const results = allResults.map((page) => {
       const p = page.properties;
       
-      // 【ここが修正ポイント】
-      // 「ファイルとメディア」の場合と「URL」の場合、両方に対応させる
+      // 単語の音声リンク
       let audioLink = '';
       if (p['音声']?.files?.length > 0) {
-        // ファイルをアップロードした場合ここから取れる
         audioLink = p['音声'].files[0].file?.url || p['音声'].files[0].external?.url;
       } else {
-        // 普通のURL列の場合ここから取れる
         audioLink = p['音声']?.url;
+      }
+
+      // 例文の音声リンク
+      let exampleAudioLink = '';
+      if (p['例文音声']?.files?.length > 0) {
+        exampleAudioLink = p['例文音声'].files[0].file?.url || p['例文音声'].files[0].external?.url;
       }
 
       return {
@@ -60,9 +62,11 @@ export default async function Home() {
         katakana: p['カタカナ発音']?.rich_text?.[0]?.plain_text || '',
         genre: p['ジャンル']?.select?.name || 'その他',
         difficulty: p['難易度']?.select?.name || '-',
-        audioUrl: audioLink || '', // 強化されたリンク取得ロジック
+        audioUrl: audioLink || '',
+        exampleAudioUrl: exampleAudioLink || '',
         memo: p['メモ']?.rich_text?.[0]?.plain_text || '',
         example: p['例文']?.rich_text?.[0]?.plain_text || '',
+        exampleTranslation: p['例文訳']?.rich_text?.[0]?.plain_text || '', // 【追加】例文の訳
         lastViewed: p['最終表示日']?.date?.start || '-',
         videoUrl: p['動画']?.url || '',
       };
