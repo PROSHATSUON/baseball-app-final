@@ -37,10 +37,9 @@ const ClockIcon = () => (
 );
 // --------------------
 
-export default function ClientPage({ words }) {
-  // 【ここが絶対安全装置】
-  // wordsが空(null/undefined)なら、空の配列[]として扱う
-  const safeWords = Array.isArray(words) ? words : [];
+export default function ClientPage(props) {
+  // 【絶対防御】props.wordsが存在し、かつ配列である場合のみ使う。それ以外は空配列。
+  const safeWords = (props.words && Array.isArray(props.words)) ? props.words : [];
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ALL');
@@ -51,7 +50,6 @@ export default function ClientPage({ words }) {
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
   const filteredWords = useMemo(() => {
-    // safeWordsを使うことでエラーを完全回避
     return safeWords.filter((item) => {
       const matchGenre = selectedGenre === 'ALL' || item.genre === selectedGenre;
       const matchSearch = 
