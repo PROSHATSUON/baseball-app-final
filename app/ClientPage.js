@@ -1,11 +1,14 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 
 export default function ClientPage({ words }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [expandedId, setExpandedId] = useState(null);
   const [videoModalUrl, setVideoModalUrl] = useState(null);
+  
+  // 画面にあるオーディオタグを操作するための「リモコン」
+  const audioRef = useRef(null);
 
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
@@ -20,10 +23,10 @@ export default function ClientPage({ words }) {
     });
   }, [searchQuery, selectedGenre, words]);
 
-  // 音声再生機能（シンプル版）
+  // 【最終版】音声再生機能（HTMLオーディオタグ操作方式）
   const playAudio = (e, rawUrl) => {
     e.stopPropagation();
-    if (!rawUrl) return;
+    if (!rawUrl || !audioRef.current) return;
 
     let fileId = "";
     const match1 = rawUrl.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
@@ -32,15 +35,19 @@ export default function ClientPage({ words }) {
     if (match1) fileId = match1[1];
     else if (match2) fileId = match2[1];
 
+    // drive.google.com ではなく docs.google.com を使うと安定する
     const playUrl = fileId 
-      ? `https://drive.google.com/uc?export=download&id=${fileId}` 
+      ? `https://docs.google.com/uc?export=download&id=${fileId}` 
       : rawUrl;
 
-    const audio = new Audio(playUrl);
+    // プレーヤーに曲をセットして再生
+    const player = audioRef.current;
+    player.src = playUrl;
+    player.load();
     
-    audio.play().catch((err) => {
-      console.error("Audio Error:", err);
-      alert("再生できませんでした。Googleドライブの共有設定を確認してください。");
+    player.play().catch((err) => {
+      console.error("Playback failed:", err);
+      alert(`再生エラー: ブラウザが音声をブロックしました。\n\n詳細: ${err.message}`);
     });
   };
 
@@ -53,6 +60,10 @@ export default function ClientPage({ words }) {
 
   return (
     <div className="min-h-screen pb-20 font-sans text-gray-800 bg-[#f8f9fa]">
+      
+      {/* --- ここが重要：隠しオーディオプレーヤー --- */}
+      <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
+
       <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="p-3">
           <input
