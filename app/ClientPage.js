@@ -2,7 +2,6 @@
 import { useState, useMemo, useRef } from 'react';
 
 // --- アイコンコンポーネント ---
-// 単語のスピーカー
 const SpeakerIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -10,14 +9,13 @@ const SpeakerIcon = () => (
   </svg>
 );
 
-// 例文のミニ再生
-const PlayCircleIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+// 【新】例文用の押しやすい再生アイコン（塗りつぶし三角）
+const PlayIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <polygon points="5 3 19 12 5 21 5 3"></polygon>
   </svg>
 );
 
-// 【新】かっこいい動画再生アイコン
 const VideoIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
     <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
@@ -31,13 +29,19 @@ const VideoIcon = () => (
     <polygon points="10 9 15 12 10 15 10 9" fill="currentColor" stroke="none"></polygon>
   </svg>
 );
-// ------------------------------------
+
+const ClockIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <polyline points="12 6 12 12 16 14"></polyline>
+  </svg>
+);
+// --------------------
 
 export default function ClientPage({ words }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [expandedId, setExpandedId] = useState(null);
-  // URLではなく「選択された単語データ丸ごと」を保持する形に変更
   const [videoModalItem, setVideoModalItem] = useState(null);
   const audioRef = useRef(null);
 
@@ -68,7 +72,6 @@ export default function ClientPage({ words }) {
     const player = audioRef.current;
     player.src = playUrl;
     player.load();
-    
     player.play().catch((err) => {
       console.error("Playback failed:", err);
       alert(`再生エラー: ブラウザが音声をブロックしました。\n\n詳細: ${err.message}`);
@@ -86,6 +89,7 @@ export default function ClientPage({ words }) {
     <div className="min-h-screen pb-20 font-sans text-gray-800 bg-[#f8f9fa]">
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
+      {/* --- ヘッダー --- */}
       <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="p-3">
           <input
@@ -114,6 +118,7 @@ export default function ClientPage({ words }) {
         </div>
       </div>
 
+      {/* --- リスト --- */}
       <div className="p-3 space-y-3">
         {filteredWords.length === 0 ? (
           <div className="text-center py-20 text-gray-400">見つかりませんでした</div>
@@ -154,26 +159,27 @@ export default function ClientPage({ words }) {
                   <DetailRow label="カタカナ" content={item.katakana} />
                   <DetailRow label="ジャンル" content={item.genre} />
                   
-                  {/* 例文と訳の表示エリア */}
                   {item.example && (
                      <div className="pt-1">
                        <span className="text-[10px] font-bold text-orange-500 block mb-1">EXAMPLE</span>
-                       <div className="bg-white border-l-2 border-orange-200 pl-3 py-2 space-y-1">
+                       <div className="bg-white border-l-2 border-orange-200 pl-3 py-3 space-y-2">
                          <div className="flex items-start gap-3">
-                           <span className="flex-1 text-slate-700 italic font-medium">"{item.example}"</span>
+                           <span className="flex-1 text-slate-700 italic font-medium text-base leading-relaxed">
+                             "{item.example}"
+                           </span>
+                           {/* 【ここを変更】大きくて押しやすい例文再生ボタン */}
                            {item.exampleAudioUrl && (
                              <button 
                                onClick={(e) => playAudio(e, item.exampleAudioUrl)}
-                               className="flex-shrink-0 text-orange-400 hover:text-orange-600 transition-colors p-1"
+                               className="flex-shrink-0 flex items-center justify-center w-10 h-10 bg-orange-100 text-orange-600 rounded-full hover:bg-orange-500 hover:text-white transition-all shadow-sm active:scale-95 ml-1"
                                title="例文を再生"
                              >
-                               <PlayCircleIcon />
+                               <PlayIcon />
                              </button>
                            )}
                          </div>
-                         {/* 【追加】例文の日本語訳 */}
                          {item.exampleTranslation && (
-                           <div className="text-xs text-gray-500 pl-1">
+                           <div className="text-xs text-gray-500 pl-1 border-t border-gray-100 pt-2">
                              {item.exampleTranslation}
                            </div>
                          )}
@@ -187,12 +193,11 @@ export default function ClientPage({ words }) {
                     {item.lastViewed !== '-' && (
                       <div className="text-[10px] text-gray-300">Last Check: {item.lastViewed}</div>
                     )}
-                    {/* 【修正】動画ボタンをテキストからかっこいいアイコンに変更 */}
                     {item.videoUrl && (
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          setVideoModalItem(item); // URLではなくアイテム全体をセット
+                          setVideoModalItem(item);
                         }}
                         className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 font-bold rounded-full border border-red-100 hover:bg-red-100 hover:shadow-md transition-all active:scale-95"
                       >
@@ -208,7 +213,7 @@ export default function ClientPage({ words }) {
         )}
       </div>
 
-      {/* 動画ポップアップ（モーダル） */}
+      {/* --- 動画ポップアップ --- */}
       {videoModalItem && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fadeIn"
@@ -226,10 +231,32 @@ export default function ClientPage({ words }) {
                 allowFullScreen
               ></iframe>
             </div>
-            {/* 【追加】動画の下に単語と意味を表示するエリア */}
-            <div className="p-4 text-white bg-slate-800">
-              <h3 className="text-xl font-extrabold text-orange-400">{videoModalItem.word}</h3>
-              <p className="text-sm font-bold mt-1">{videoModalItem.meaning}</p>
+            
+            <div className="p-5 text-white bg-slate-800">
+              <div className="flex items-baseline justify-between mb-2">
+                <h3 className="text-xl font-extrabold text-orange-400">{videoModalItem.word}</h3>
+                {videoModalItem.videoTime && (
+                  <div className="flex items-center gap-1 bg-slate-700 px-2 py-1 rounded text-xs font-mono text-gray-300">
+                    <ClockIcon />
+                    <span>{videoModalItem.videoTime}</span>
+                  </div>
+                )}
+              </div>
+
+              {videoModalItem.videoSentence ? (
+                <div className="space-y-2 mt-3 bg-slate-700/50 p-3 rounded-lg border border-slate-600">
+                  <p className="text-lg font-bold text-white leading-snug">
+                    "{videoModalItem.videoSentence}"
+                  </p>
+                  <p className="text-sm text-gray-300">
+                    {videoModalItem.videoTranslation}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm font-bold mt-1 text-gray-200">
+                  {videoModalItem.meaning}
+                </p>
+              )}
             </div>
 
             <button 
