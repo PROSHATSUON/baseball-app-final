@@ -16,16 +16,9 @@ const PlayIcon = () => (
 );
 
 const VideoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-    <line x1="7" y1="2" x2="7" y2="22"></line>
-    <line x1="17" y1="2" x2="17" y2="22"></line>
-    <line x1="2" y1="12" x2="22" y2="12"></line>
-    <line x1="2" y1="7" x2="7" y2="7"></line>
-    <line x1="2" y1="17" x2="7" y2="17"></line>
-    <line x1="17" y1="17" x2="22" y2="17"></line>
-    <line x1="17" y1="7" x2="22" y2="7"></line>
-    <polygon points="10 9 15 12 10 15 10 9" fill="currentColor" stroke="none"></polygon>
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="23 7 16 12 23 17 23 7"></polygon>
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
   </svg>
 );
 
@@ -108,10 +101,13 @@ export default function ClientPage({ words }) {
       }
 
       // 2. ヘッダーの出し入れ制御
-      // リストモードのときのみ、スクロールで隠す動作を有効にする
       if (activeTab === 'list') {
-        if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 60) {
-          // 下にスクロール中 & ある程度下がったら隠す
+        // ★追加：一番上付近に来たら自動で展開する
+        if (currentScrollTop < 10) {
+          setIsHeaderVisible(true);
+        }
+        // 下にスクロール中 & ある程度下がったら隠す
+        else if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 60) {
           setIsHeaderVisible(false);
         }
       }
@@ -235,7 +231,6 @@ export default function ClientPage({ words }) {
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
       {/* --- アコーディオンヘッダーエリア --- */}
-      {/* max-hとopacityで伸縮させることで、背景ごと消えるように修正 */}
       <div 
         className={`flex-none bg-white z-30 shadow-sm transition-all duration-500 ease-in-out overflow-hidden ${
           isHeaderVisible ? 'max-h-[300px] opacity-100 border-b border-gray-200' : 'max-h-0 opacity-0 border-none'
@@ -269,7 +264,7 @@ export default function ClientPage({ words }) {
 
         {/* 検索・ジャンル（リストモード時のみ表示） */}
         {activeTab === 'list' && (
-          <div className="pb-8"> {/* 下にボタン用の余白 */}
+          <div className="pb-8">
             <div className="px-3 pb-3">
               <input
                 type="text"
@@ -331,7 +326,7 @@ export default function ClientPage({ words }) {
         className="flex-1 overflow-y-auto relative"
       >
         {activeTab === 'list' && (
-          <div className="p-3 space-y-3 pb-24">
+          <div className="p-3 space-y-3 pb-24 pt-4">
             {filteredWords.length === 0 ? (
               <div className="text-center py-20 text-gray-400">見つかりませんでした</div>
             ) : (
@@ -369,7 +364,8 @@ export default function ClientPage({ words }) {
                   {expandedId === item.id && (
                     <div className="bg-slate-50 border-t border-gray-100 px-5 py-4 text-sm space-y-3 animate-fadeIn">
                       <DetailRow label="カタカナ" content={item.katakana} />
-                      <DetailRow label="ジャンル" content={item.genre} />
+                      
+                      {/* ジャンル行を削除しました */}
                       
                       {item.example && (
                         <div className="pt-1">
@@ -395,18 +391,18 @@ export default function ClientPage({ words }) {
                       
                       {item.memo && <DetailRow label="MEMO" content={item.memo} />}
 
-                      <div className="pt-3 flex items-center justify-between">
-                        {item.lastViewed !== '-' && <div className="text-[10px] text-gray-300">Last Check: {item.lastViewed}</div>}
-                        {item.videoUrl && (
+                      {/* Last Check日付表示を削除し、動画ボタンをオシャレな日本語版に変更 */}
+                      {item.videoUrl && (
+                        <div className="pt-2">
                           <button 
                             onClick={(e) => { e.stopPropagation(); setVideoModalItem(item); }}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 font-bold rounded-full border border-red-100 hover:bg-red-100 hover:shadow-md transition-all active:scale-95"
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-600 transition-all active:scale-[0.98]"
                           >
                             <VideoIcon />
-                            <span className="text-sm">Watch Video</span>
+                            <span>動画で確認する</span>
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -570,7 +566,6 @@ export default function ClientPage({ words }) {
             
             <div className="p-5 text-white">
               <div className="flex items-baseline justify-between mb-2">
-                {/* ★ここをオレンジに変更しました */}
                 <h3 className="text-xl font-extrabold text-orange-400">
                   {videoModalItem.word}
                   <span className="ml-3 text-sm text-gray-300 font-normal">
