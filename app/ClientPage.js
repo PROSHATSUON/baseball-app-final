@@ -50,7 +50,7 @@ const ArrowDownIcon = () => (
   </svg>
 );
 
-// ★発音記号用の安全なフォントスタックを定義
+// ★発音記号用の安全なフォントスタック
 const IPA_FONT_STYLE = {
   fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif'
 };
@@ -276,7 +276,6 @@ export default function ClientPage({ words }) {
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
-                        {/* ★修正：ここに発音記号用フォントを適用 */}
                         <span style={IPA_FONT_STYLE}>{item.ipa}</span>
                         <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{item.difficulty}</span>
                       </div>
@@ -386,7 +385,6 @@ export default function ClientPage({ words }) {
                       {testQuestions[currentQuestionIndex].word}
                     </h3>
                     <div className="flex items-center gap-3 justify-center mb-8">
-                      {/* ★修正：ここにも発音記号用フォントを適用 */}
                       <span className="font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded text-sm" style={IPA_FONT_STYLE}>
                         {testQuestions[currentQuestionIndex].ipa}
                       </span>
@@ -480,10 +478,11 @@ export default function ClientPage({ words }) {
               <iframe
                 width="100%"
                 height="100%"
-                src={`https://www.youtube.com/embed/${getYoutubeId(videoModalItem.videoUrl)}?start=${getYoutubeStartTime(videoModalItem.videoUrl)}&playsinline=1&rel=0`}
+                // ★修正：autoplay=1を追加し、allow属性も追加して自動再生の許可を申請します
+                src={`https://www.youtube.com/embed/${getYoutubeId(videoModalItem.videoUrl)}?autoplay=1&start=${getYoutubeStartTime(videoModalItem.videoUrl)}&playsinline=1&rel=0`}
                 title="YouTube video player"
                 frameBorder="0"
-                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               ></iframe>
             </div>
