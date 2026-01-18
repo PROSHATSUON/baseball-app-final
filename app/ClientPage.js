@@ -50,7 +50,6 @@ const ArrowDownIcon = () => (
   </svg>
 );
 
-// ★発音記号用の安全なフォントスタック
 const IPA_FONT_STYLE = {
   fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif'
 };
@@ -61,7 +60,6 @@ export default function ClientPage({ words }) {
   const safeWords = (words && Array.isArray(words)) ? words : [];
 
   const [activeTab, setActiveTab] = useState('list');
-  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [expandedId, setExpandedId] = useState(null);
@@ -74,26 +72,33 @@ export default function ClientPage({ words }) {
 
   const [showScrollBtns, setShowScrollBtns] = useState(false);
   const audioRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
   useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
     const handleScroll = () => {
-      if (window.scrollY > 100) {
+      // 50pxスクロールしたら表示
+      if (container.scrollTop > 50) {
         setShowScrollBtns(true);
       } else {
         setShowScrollBtns(false);
       }
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const scrollToBottom = () => {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: 'smooth' });
   };
 
   const playAudio = (e, rawUrl) => {
@@ -192,42 +197,43 @@ export default function ClientPage({ words }) {
   }, [searchQuery, selectedGenre, safeWords]);
 
   return (
-    <div className="min-h-screen pb-20 font-sans text-gray-800 bg-[#f8f9fa]">
+    <div className="h-[100dvh] flex flex-col font-sans text-gray-800 bg-[#f8f9fa] overflow-hidden">
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm px-4 py-3">
-        <div className="flex bg-gray-100 p-1 rounded-xl">
-          <button
-            onClick={() => setActiveTab('list')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-              activeTab === 'list' 
-                ? 'bg-white text-orange-600 shadow-sm' 
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            単語リスト
-          </button>
-          <button
-            onClick={() => setActiveTab('test')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-              activeTab === 'test' 
-                ? 'bg-white text-orange-600 shadow-sm' 
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            テストモード
-          </button>
+      {/* --- 固定ヘッダーエリア --- */}
+      <div className="flex-none bg-white z-20 shadow-sm border-b border-gray-200">
+        <div className="px-4 py-3">
+          <div className="flex bg-gray-100 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveTab('list')}
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+                activeTab === 'list' 
+                  ? 'bg-white text-blue-700 shadow-sm' 
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              単語リスト
+            </button>
+            <button
+              onClick={() => setActiveTab('test')}
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+                activeTab === 'test' 
+                  ? 'bg-white text-blue-700 shadow-sm' 
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              テストモード
+            </button>
+          </div>
         </div>
-      </div>
 
-      {activeTab === 'list' && (
-        <>
-          <div className="bg-white border-b border-gray-100 pb-2">
-            <div className="p-3">
+        {activeTab === 'list' && (
+          <div className="pb-2">
+            <div className="px-3 pb-3">
               <input
                 type="text"
                 placeholder="単語・意味・カタカナ検索"
-                className="w-full rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5 text-base focus:bg-white focus:border-orange-500 focus:outline-none transition-all"
+                className="w-full rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5 text-base focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -238,7 +244,7 @@ export default function ClientPage({ words }) {
                   key={genre}
                   onClick={() => setSelectedGenre(genre)}
                   className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                    selectedGenre === genre ? 'bg-orange-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    selectedGenre === genre ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                   }`}
                 >
                   {genre}
@@ -249,8 +255,16 @@ export default function ClientPage({ words }) {
               {filteredWords.length} Words Found
             </div>
           </div>
+        )}
+      </div>
 
-          <div className="p-3 space-y-3">
+      {/* --- スクロールエリア --- */}
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto relative"
+      >
+        {activeTab === 'list' && (
+          <div className="p-3 space-y-3 pb-24">
             {filteredWords.length === 0 ? (
               <div className="text-center py-20 text-gray-400">見つかりませんでした</div>
             ) : (
@@ -259,7 +273,7 @@ export default function ClientPage({ words }) {
                   key={item.id}
                   onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
                   className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${
-                    expandedId === item.id ? 'border-orange-400 shadow-md ring-1 ring-orange-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'
+                    expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'
                   }`}
                 >
                   <div className="p-4 flex justify-between items-start">
@@ -269,7 +283,7 @@ export default function ClientPage({ words }) {
                         {item.audioUrl && (
                           <button 
                             onClick={(e) => playAudio(e, item.audioUrl)}
-                            className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white transition-all shadow-sm active:scale-95"
+                            className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-95"
                           >
                             <SpeakerIcon />
                           </button>
@@ -292,14 +306,14 @@ export default function ClientPage({ words }) {
                       
                       {item.example && (
                         <div className="pt-1">
-                          <span className="text-[10px] font-bold text-orange-500 block mb-1">EXAMPLE</span>
-                          <div className="bg-white border-l-2 border-orange-200 pl-3 py-3 space-y-2">
+                          <span className="text-[10px] font-bold text-blue-600 block mb-1">EXAMPLE</span>
+                          <div className="bg-white border-l-2 border-blue-200 pl-3 py-3 space-y-2">
                             <div className="flex items-start gap-3">
                               <span className="flex-1 text-slate-700 italic font-medium text-base leading-relaxed">"{item.example}"</span>
                               {item.exampleAudioUrl && (
                                 <button 
                                   onClick={(e) => playAudio(e, item.exampleAudioUrl)}
-                                  className="flex-shrink-0 flex items-center justify-center w-10 h-10 bg-orange-100 text-orange-600 rounded-full hover:bg-orange-500 hover:text-white transition-all shadow-sm active:scale-95 ml-1"
+                                  className="flex-shrink-0 flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-95 ml-1"
                                 >
                                   <PlayIcon />
                                 </button>
@@ -332,145 +346,147 @@ export default function ClientPage({ words }) {
               ))
             )}
           </div>
-        </>
-      )}
+        )}
 
-      {activeTab === 'test' && (
-        <div className="p-4 h-[calc(100vh-80px)] flex flex-col">
-          {testPhase === 'select' && (
-            <div className="flex-1 flex flex-col justify-center items-center space-y-6 animate-fadeIn">
-              <h2 className="text-2xl font-black text-slate-800 text-center">
-                <span className="text-orange-500 block text-lg mb-1">TEST MODE</span>
-                ジャンルを選択
-              </h2>
-              <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-                {GENRES.map((genre) => (
-                  <button
-                    key={genre}
-                    onClick={() => startTest(genre)}
-                    className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-orange-500 hover:bg-orange-50 transition-all font-bold text-slate-700 active:scale-95"
-                  >
-                    {genre}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-400 mt-4">選択したジャンルからランダムに10問出題されます</p>
-            </div>
-          )}
-
-          {testPhase === 'playing' && (
-            <div className="flex-1 flex flex-col max-w-md mx-auto w-full relative">
-              <div className="mb-4">
-                <div className="flex justify-between text-xs font-bold text-gray-400 mb-1">
-                  <span>Question {currentQuestionIndex + 1}</span>
-                  <span>{testQuestions.length}</span>
+        {activeTab === 'test' && (
+          <div className="p-4 min-h-full flex flex-col">
+            {testPhase === 'select' && (
+              <div className="flex-1 flex flex-col justify-center items-center space-y-6 animate-fadeIn py-10">
+                <h2 className="text-2xl font-black text-slate-800 text-center">
+                  <span className="text-blue-600 block text-lg mb-1">TEST MODE</span>
+                  ジャンルを選択
+                </h2>
+                <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+                  {GENRES.map((genre) => (
+                    <button
+                      key={genre}
+                      onClick={() => startTest(genre)}
+                      className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:bg-blue-50 transition-all font-bold text-slate-700 active:scale-95"
+                    >
+                      {genre}
+                    </button>
+                  ))}
                 </div>
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-orange-500 transition-all duration-300 ease-out"
-                    style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}
-                  ></div>
-                </div>
+                <p className="text-xs text-gray-400 mt-4">選択したジャンルからランダムに10問出題されます</p>
               </div>
+            )}
 
-              <div 
-                className="flex-1 relative perspective-1000 group cursor-pointer"
-                onClick={() => setIsFlipped(!isFlipped)}
-              >
-                <div className={`relative w-full h-full transition-all duration-500 transform-style-3d shadow-xl rounded-2xl bg-white border border-gray-200 ${isFlipped ? 'rotate-y-180' : ''}`}>
-                  
-                  <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10">
-                    <span className="text-xs font-bold text-orange-500 mb-2">TAP TO FLIP</span>
-                    <h3 className="text-4xl font-black text-slate-800 mb-4 leading-tight">
-                      {testQuestions[currentQuestionIndex].word}
-                    </h3>
-                    <div className="flex items-center gap-3 justify-center mb-8">
-                      <span className="font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded text-sm" style={IPA_FONT_STYLE}>
-                        {testQuestions[currentQuestionIndex].ipa}
-                      </span>
-                    </div>
-                    {testQuestions[currentQuestionIndex].audioUrl && (
-                      <button 
-                        onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)}
-                        className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center shadow-md hover:bg-orange-500 hover:text-white transition-all active:scale-90"
-                      >
-                        <SpeakerIcon />
-                      </button>
-                    )}
+            {testPhase === 'playing' && (
+              <div className="flex-1 flex flex-col max-w-md mx-auto w-full relative py-4">
+                <div className="mb-4">
+                  <div className="flex justify-between text-xs font-bold text-gray-400 mb-1">
+                    <span>Question {currentQuestionIndex + 1}</span>
+                    <span>{testQuestions.length}</span>
                   </div>
-
-                  <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-50 flex flex-col items-center justify-center p-6 text-center rounded-2xl overflow-y-auto">
-                    <span className="text-xs font-bold text-gray-400 mb-4">ANSWER</span>
-                    
-                    <div className="text-2xl font-bold text-slate-800 mb-6 w-full break-words">
-                      {testQuestions[currentQuestionIndex].meaning}
-                    </div>
-
-                    {testQuestions[currentQuestionIndex].example && (
-                      <div className="bg-white p-4 rounded-xl border border-gray-200 w-full text-left shadow-sm">
-                         <div className="flex items-start gap-3 mb-2">
-                           <span className="flex-1 text-slate-700 italic font-medium">
-                             "{testQuestions[currentQuestionIndex].example}"
-                           </span>
-                           {testQuestions[currentQuestionIndex].exampleAudioUrl && (
-                             <button 
-                               onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].exampleAudioUrl)}
-                               className="flex-shrink-0 w-8 h-8 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center active:scale-95"
-                             >
-                               <PlayIcon />
-                             </button>
-                           )}
-                         </div>
-                         {testQuestions[currentQuestionIndex].exampleTranslation && (
-                           <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
-                             {testQuestions[currentQuestionIndex].exampleTranslation}
-                           </div>
-                         )}
-                      </div>
-                    )}
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-600 transition-all duration-300 ease-out"
+                      style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}
+                    ></div>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-6 flex justify-center">
-                <button
-                  onClick={nextCard}
-                  className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                <div 
+                  className="flex-1 min-h-[400px] relative perspective-1000 group cursor-pointer"
+                  onClick={() => setIsFlipped(!isFlipped)}
                 >
-                  {currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}
+                  <div className={`relative w-full h-full transition-all duration-500 transform-style-3d shadow-xl rounded-2xl bg-white border border-gray-200 ${isFlipped ? 'rotate-y-180' : ''}`}>
+                    
+                    <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10">
+                      <span className="text-xs font-bold text-blue-600 mb-2">TAP TO FLIP</span>
+                      <h3 className="text-4xl font-black text-slate-800 mb-4 leading-tight">
+                        {testQuestions[currentQuestionIndex].word}
+                      </h3>
+                      <div className="flex items-center gap-3 justify-center mb-8">
+                        <span className="font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded text-sm" style={IPA_FONT_STYLE}>
+                          {testQuestions[currentQuestionIndex].ipa}
+                        </span>
+                      </div>
+                      {testQuestions[currentQuestionIndex].audioUrl && (
+                        <button 
+                          onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)}
+                          className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shadow-md hover:bg-blue-600 hover:text-white transition-all active:scale-90"
+                        >
+                          <SpeakerIcon />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-50 flex flex-col items-center justify-center p-6 text-center rounded-2xl overflow-y-auto">
+                      <span className="text-xs font-bold text-gray-400 mb-4">ANSWER</span>
+                      
+                      <div className="text-2xl font-bold text-slate-800 mb-6 w-full break-words">
+                        {testQuestions[currentQuestionIndex].meaning}
+                      </div>
+
+                      {testQuestions[currentQuestionIndex].example && (
+                        <div className="bg-white p-4 rounded-xl border border-gray-200 w-full text-left shadow-sm">
+                           <div className="flex items-start gap-3 mb-2">
+                             <span className="flex-1 text-slate-700 italic font-medium">
+                               "{testQuestions[currentQuestionIndex].example}"
+                             </span>
+                             {testQuestions[currentQuestionIndex].exampleAudioUrl && (
+                               <button 
+                                 onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].exampleAudioUrl)}
+                                 className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center active:scale-95"
+                               >
+                                 <PlayIcon />
+                               </button>
+                             )}
+                           </div>
+                           {testQuestions[currentQuestionIndex].exampleTranslation && (
+                             <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+                               {testQuestions[currentQuestionIndex].exampleTranslation}
+                             </div>
+                           )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-center">
+                  <button
+                    onClick={nextCard}
+                    className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    {currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {testPhase === 'result' && (
+              <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 animate-fadeIn py-10">
+                <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mb-2">
+                  🎉
+                </div>
+                <h2 className="text-3xl font-black text-slate-800">Test Completed!</h2>
+                <p className="text-gray-500">10問のトレーニングが完了しました。<br/>お疲れ様でした！</p>
+                
+                <button
+                  onClick={restartTest}
+                  className="w-full max-w-xs bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all"
+                >
+                  もう一度テストする
+                </button>
+                <button
+                  onClick={() => setActiveTab('list')}
+                  className="text-gray-400 font-bold hover:text-gray-600 text-sm"
+                >
+                  単語リストに戻る
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        )}
+      </div>
 
-          {testPhase === 'result' && (
-            <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 animate-fadeIn">
-              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mb-2">
-                🎉
-              </div>
-              <h2 className="text-3xl font-black text-slate-800">Test Completed!</h2>
-              <p className="text-gray-500">10問のトレーニングが完了しました。<br/>お疲れ様でした！</p>
-              
-              <button
-                onClick={restartTest}
-                className="w-full max-w-xs bg-orange-500 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-orange-600 active:scale-95 transition-all"
-              >
-                もう一度テストする
-              </button>
-              <button
-                onClick={() => setActiveTab('list')}
-                className="text-gray-400 font-bold hover:text-gray-600 text-sm"
-              >
-                単語リストに戻る
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
+      {/* --- 動画モーダル (位置修正版) --- */}
+      {/* items-start と pt-20 で上寄せに配置 */}
       {videoModalItem && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-md p-4 animate-fadeIn"
+          className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/30 backdrop-blur-md p-4 animate-fadeIn"
           onClick={() => setVideoModalItem(null)}
         >
           <div className="relative w-full max-w-2xl bg-slate-900 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10" onClick={e => e.stopPropagation()}>
@@ -488,7 +504,7 @@ export default function ClientPage({ words }) {
             
             <div className="p-5 text-white bg-slate-800">
               <div className="flex items-baseline justify-between mb-2">
-                <h3 className="text-xl font-extrabold text-orange-400">
+                <h3 className="text-xl font-extrabold text-blue-400">
                   {videoModalItem.word}
                   <span className="ml-3 text-sm text-gray-300 font-normal">
                     {videoModalItem.meaning}
@@ -522,11 +538,13 @@ export default function ClientPage({ words }) {
         </div>
       )}
 
+      {/* --- スクロールボタン (上側・右上配置版) --- */}
+      {/* top-[160px] でヘッダーの下あたりに固定 */}
       {showScrollBtns && activeTab === 'list' && (
-        <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3 animate-fadeIn">
+        <div className="fixed top-[160px] right-4 z-40 flex flex-col gap-3 animate-fadeIn">
           <button
             onClick={scrollToTop}
-            className="w-12 h-12 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 active:scale-95 transition-all opacity-80 hover:opacity-100"
+            className="w-10 h-10 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 active:scale-95 transition-all opacity-80 hover:opacity-100"
             aria-label="Scroll to top"
           >
             <ArrowUpIcon />
@@ -534,7 +552,7 @@ export default function ClientPage({ words }) {
 
           <button
             onClick={scrollToBottom}
-            className="w-12 h-12 bg-white text-slate-800 border border-gray-200 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all opacity-80 hover:opacity-100"
+            className="w-10 h-10 bg-white text-slate-800 border border-gray-200 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all opacity-80 hover:opacity-100"
              aria-label="Scroll to bottom"
           >
             <ArrowDownIcon />
@@ -556,7 +574,7 @@ function DetailRow({ label, content }) {
   if (!content) return null;
   return (
     <div>
-      <span className="text-[10px] font-bold text-orange-500 uppercase block mb-0.5">{label}</span>
+      <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
       <span className="text-gray-700">{content}</span>
     </div>
   );
