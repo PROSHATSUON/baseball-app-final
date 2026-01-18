@@ -36,7 +36,6 @@ const ClockIcon = () => (
   </svg>
 );
 
-// ↑矢印アイコン
 const ArrowUpIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="12" y1="19" x2="12" y2="5"></line>
@@ -44,56 +43,51 @@ const ArrowUpIcon = () => (
   </svg>
 );
 
-// ↓矢印アイコン
 const ArrowDownIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="12" y1="5" x2="12" y2="19"></line>
     <polyline points="19 12 12 19 5 12"></polyline>
   </svg>
 );
+
+// ★発音記号用の安全なフォントスタックを定義
+const IPA_FONT_STYLE = {
+  fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif'
+};
+
 // --------------------
 
 export default function ClientPage({ words }) {
-  // 安全装置
   const safeWords = (words && Array.isArray(words)) ? words : [];
 
-  // --- 状態管理 ---
-  const [activeTab, setActiveTab] = useState('list'); // 'list' or 'test'
+  const [activeTab, setActiveTab] = useState('list');
   
-  // リスト用
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [expandedId, setExpandedId] = useState(null);
   const [videoModalItem, setVideoModalItem] = useState(null);
 
-  // テスト用
-  const [testPhase, setTestPhase] = useState('select'); // 'select', 'playing', 'result'
+  const [testPhase, setTestPhase] = useState('select');
   const [testQuestions, setTestQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // スクロールボタンの表示制御
   const [showScrollBtns, setShowScrollBtns] = useState(false);
-
   const audioRef = useRef(null);
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
-  // --- スクロール検知 ---
   useEffect(() => {
     const handleScroll = () => {
-      // 100px以上スクロールしたらボタンを表示
       if (window.scrollY > 100) {
         setShowScrollBtns(true);
       } else {
         setShowScrollBtns(false);
       }
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- スクロール機能 ---
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -102,9 +96,8 @@ export default function ClientPage({ words }) {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   };
 
-  // --- 共通機能：音声再生 ---
   const playAudio = (e, rawUrl) => {
-    e?.stopPropagation(); // カードのフリップ等を防ぐ
+    e?.stopPropagation();
     if (!rawUrl || !audioRef.current) return;
 
     let fileId = "";
@@ -123,7 +116,6 @@ export default function ClientPage({ words }) {
     });
   };
 
-  // YouTube ID抽出
   const getYoutubeId = (url) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -131,7 +123,6 @@ export default function ClientPage({ words }) {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  // YouTube開始時間の抽出
   const getYoutubeStartTime = (url) => {
     if (!url) return 0;
     const match = url.match(/[?&](t|start)=([^&]+)/);
@@ -152,7 +143,6 @@ export default function ClientPage({ words }) {
     return seconds > 0 ? seconds : 0;
   };
 
-  // --- テスト機能 ---
   const startTest = (genre) => {
     let candidates = safeWords;
     if (genre !== 'ALL') {
@@ -190,7 +180,6 @@ export default function ClientPage({ words }) {
     setIsFlipped(false);
   };
 
-  // --- リスト機能 ---
   const filteredWords = useMemo(() => {
     return safeWords.filter((item) => {
       const matchGenre = selectedGenre === 'ALL' || item.genre === selectedGenre;
@@ -202,12 +191,10 @@ export default function ClientPage({ words }) {
     });
   }, [searchQuery, selectedGenre, safeWords]);
 
-
   return (
     <div className="min-h-screen pb-20 font-sans text-gray-800 bg-[#f8f9fa]">
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
-      {/* --- タブ切り替え --- */}
       <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm px-4 py-3">
         <div className="flex bg-gray-100 p-1 rounded-xl">
           <button
@@ -233,12 +220,8 @@ export default function ClientPage({ words }) {
         </div>
       </div>
 
-      {/* ========================================== */}
-      {/* 単語リスト表示エリア              */}
-      {/* ========================================== */}
       {activeTab === 'list' && (
         <>
-          {/* 検索・フィルター */}
           <div className="bg-white border-b border-gray-100 pb-2">
             <div className="p-3">
               <input
@@ -267,7 +250,6 @@ export default function ClientPage({ words }) {
             </div>
           </div>
 
-          {/* リスト本体 */}
           <div className="p-3 space-y-3">
             {filteredWords.length === 0 ? (
               <div className="text-center py-20 text-gray-400">見つかりませんでした</div>
@@ -294,7 +276,8 @@ export default function ClientPage({ words }) {
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
-                        <span>{item.ipa}</span>
+                        {/* ★修正：ここに発音記号用フォントを適用 */}
+                        <span style={IPA_FONT_STYLE}>{item.ipa}</span>
                         <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{item.difficulty}</span>
                       </div>
                     </div>
@@ -353,9 +336,6 @@ export default function ClientPage({ words }) {
         </>
       )}
 
-      {/* ========================================== */}
-      {/* テストモード表示エリア             */}
-      {/* ========================================== */}
       {activeTab === 'test' && (
         <div className="p-4 h-[calc(100vh-80px)] flex flex-col">
           {testPhase === 'select' && (
@@ -381,7 +361,6 @@ export default function ClientPage({ words }) {
 
           {testPhase === 'playing' && (
             <div className="flex-1 flex flex-col max-w-md mx-auto w-full relative">
-              {/* プログレスバー */}
               <div className="mb-4">
                 <div className="flex justify-between text-xs font-bold text-gray-400 mb-1">
                   <span>Question {currentQuestionIndex + 1}</span>
@@ -395,25 +374,23 @@ export default function ClientPage({ words }) {
                 </div>
               </div>
 
-              {/* カード本体 */}
               <div 
                 className="flex-1 relative perspective-1000 group cursor-pointer"
                 onClick={() => setIsFlipped(!isFlipped)}
               >
                 <div className={`relative w-full h-full transition-all duration-500 transform-style-3d shadow-xl rounded-2xl bg-white border border-gray-200 ${isFlipped ? 'rotate-y-180' : ''}`}>
                   
-                  {/* --- 表面 (Front) --- */}
                   <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10">
                     <span className="text-xs font-bold text-orange-500 mb-2">TAP TO FLIP</span>
                     <h3 className="text-4xl font-black text-slate-800 mb-4 leading-tight">
                       {testQuestions[currentQuestionIndex].word}
                     </h3>
                     <div className="flex items-center gap-3 justify-center mb-8">
-                      <span className="font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded text-sm">
+                      {/* ★修正：ここにも発音記号用フォントを適用 */}
+                      <span className="font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded text-sm" style={IPA_FONT_STYLE}>
                         {testQuestions[currentQuestionIndex].ipa}
                       </span>
                     </div>
-                    {/* 音声ボタン (表面) */}
                     {testQuestions[currentQuestionIndex].audioUrl && (
                       <button 
                         onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)}
@@ -424,7 +401,6 @@ export default function ClientPage({ words }) {
                     )}
                   </div>
 
-                  {/* --- 裏面 (Back) --- */}
                   <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-50 flex flex-col items-center justify-center p-6 text-center rounded-2xl overflow-y-auto">
                     <span className="text-xs font-bold text-gray-400 mb-4">ANSWER</span>
                     
@@ -458,7 +434,6 @@ export default function ClientPage({ words }) {
                 </div>
               </div>
 
-              {/* 次へボタン */}
               <div className="mt-6 flex justify-center">
                 <button
                   onClick={nextCard}
@@ -495,7 +470,6 @@ export default function ClientPage({ words }) {
         </div>
       )}
 
-      {/* --- 動画モーダル (リスト・テスト共通) --- */}
       {videoModalItem && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fadeIn"
@@ -550,10 +524,8 @@ export default function ClientPage({ words }) {
         </div>
       )}
 
-      {/* --- ★新規追加：スクロールトップ＆ボトムボタン --- */}
       {showScrollBtns && activeTab === 'list' && (
         <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3 animate-fadeIn">
-          {/* 上へ戻るボタン */}
           <button
             onClick={scrollToTop}
             className="w-12 h-12 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 active:scale-95 transition-all opacity-80 hover:opacity-100"
@@ -562,7 +534,6 @@ export default function ClientPage({ words }) {
             <ArrowUpIcon />
           </button>
 
-          {/* 下へ行くボタン */}
           <button
             onClick={scrollToBottom}
             className="w-12 h-12 bg-white text-slate-800 border border-gray-200 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all opacity-80 hover:opacity-100"
@@ -573,7 +544,6 @@ export default function ClientPage({ words }) {
         </div>
       )}
       
-      {/* CSS for 3D Flip */}
       <style jsx global>{`
         .perspective-1000 { perspective: 1000px; }
         .transform-style-3d { transform-style: preserve-3d; }
