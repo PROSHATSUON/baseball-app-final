@@ -36,10 +36,19 @@ const ClockIcon = () => (
   </svg>
 );
 
-const FlipIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+// ↑矢印アイコン
+const ArrowUpIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="19" x2="12" y2="5"></line>
+    <polyline points="5 12 12 5 19 12"></polyline>
+  </svg>
+);
+
+// ↓矢印アイコン
+const ArrowDownIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <polyline points="19 12 12 19 5 12"></polyline>
   </svg>
 );
 // --------------------
@@ -63,8 +72,35 @@ export default function ClientPage({ words }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // スクロールボタンの表示制御
+  const [showScrollBtns, setShowScrollBtns] = useState(false);
+
   const audioRef = useRef(null);
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
+
+  // --- スクロール検知 ---
+  useEffect(() => {
+    const handleScroll = () => {
+      // 100px以上スクロールしたらボタンを表示
+      if (window.scrollY > 100) {
+        setShowScrollBtns(true);
+      } else {
+        setShowScrollBtns(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // --- スクロール機能 ---
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToBottom = () => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  };
 
   // --- 共通機能：音声再生 ---
   const playAudio = (e, rawUrl) => {
@@ -470,7 +506,6 @@ export default function ClientPage({ words }) {
               <iframe
                 width="100%"
                 height="100%"
-                // autoplayを削除しました。これで読み込みループが止まります。
                 src={`https://www.youtube.com/embed/${getYoutubeId(videoModalItem.videoUrl)}?start=${getYoutubeStartTime(videoModalItem.videoUrl)}&playsinline=1&rel=0`}
                 title="YouTube video player"
                 frameBorder="0"
@@ -481,7 +516,6 @@ export default function ClientPage({ words }) {
             
             <div className="p-5 text-white bg-slate-800">
               <div className="flex items-baseline justify-between mb-2">
-                {/* ここを変更：単語の横に意味を追加しました */}
                 <h3 className="text-xl font-extrabold text-orange-400">
                   {videoModalItem.word}
                   <span className="ml-3 text-sm text-gray-300 font-normal">
@@ -502,7 +536,6 @@ export default function ClientPage({ words }) {
                   <p className="text-sm text-gray-300">{videoModalItem.videoTranslation}</p>
                 </div>
               ) : (
-                /* ここは意味がヘッダーに出たので削除してもいいですが、念のため残しておきます */
                 <p className="text-sm font-bold mt-1 text-gray-200 opacity-0">{videoModalItem.meaning}</p>
               )}
             </div>
@@ -514,6 +547,29 @@ export default function ClientPage({ words }) {
               ✕
             </button>
           </div>
+        </div>
+      )}
+
+      {/* --- ★新規追加：スクロールトップ＆ボトムボタン --- */}
+      {showScrollBtns && activeTab === 'list' && (
+        <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3 animate-fadeIn">
+          {/* 上へ戻るボタン */}
+          <button
+            onClick={scrollToTop}
+            className="w-12 h-12 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 active:scale-95 transition-all opacity-80 hover:opacity-100"
+            aria-label="Scroll to top"
+          >
+            <ArrowUpIcon />
+          </button>
+
+          {/* 下へ行くボタン */}
+          <button
+            onClick={scrollToBottom}
+            className="w-12 h-12 bg-white text-slate-800 border border-gray-200 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all opacity-80 hover:opacity-100"
+             aria-label="Scroll to bottom"
+          >
+            <ArrowDownIcon />
+          </button>
         </div>
       )}
       
