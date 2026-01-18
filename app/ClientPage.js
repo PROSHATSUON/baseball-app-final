@@ -80,9 +80,6 @@ export default function ClientPage({ words }) {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   
   const audioRef = useRef(null);
-  
-  // ★重要：リストエリアではなく、window全体のスクロールを監視するように変更
-  // 固定ヘッダー実装のため、windowスクロールの方が安定します
   const lastScrollTopRef = useRef(0);
 
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
@@ -90,7 +87,7 @@ export default function ClientPage({ words }) {
   // --- スクロール制御 ---
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollTop = window.scrollY; // windowのスクロール位置
+      const currentScrollTop = window.scrollY;
       
       // 1. トップに戻るボタンの制御
       if (currentScrollTop > 100) {
@@ -229,15 +226,13 @@ export default function ClientPage({ words }) {
     <div className="min-h-screen font-sans text-gray-800 bg-[#f8f9fa]">
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
-      {/* --- 完全固定ヘッダー --- */}
+      {/* --- 完全固定ヘッダー（タブも含めてすべて隠す） --- */}
       <div 
-        className="fixed top-0 left-0 w-full z-30 bg-white shadow-sm transition-all duration-500 ease-in-out border-b border-gray-200"
-        style={{
-          // ヘッダーが見えているときは高さを確保、隠れるときはタブの高さ(約60px)だけ残して隠すのではなく、完全に隠す実装にするなら変えますが、
-          // ここでは「検索バー部分」だけをアコーディオンとして扱います。
-        }}
+        className={`fixed top-0 left-0 w-full z-30 bg-white shadow-sm transition-transform duration-500 ease-in-out border-b border-gray-200 ${
+          isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+        }`}
       >
-        {/* タブ切り替え（常に表示される部分） */}
+        {/* タブ切り替え */}
         <div className="px-4 pt-3 pb-2 bg-white relative z-20">
           <div className="flex bg-gray-100 p-1 rounded-xl">
             <button
@@ -263,58 +258,50 @@ export default function ClientPage({ words }) {
           </div>
         </div>
 
-        {/* 検索・ジャンル（開閉する部分） */}
-        {/* overflow-hiddenとmax-heightでスムーズに消す。bg-whiteを維持 */}
-        <div 
-          className={`overflow-hidden transition-all duration-500 ease-in-out bg-white ${
-            (activeTab === 'list' && isHeaderVisible) ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0'
-          }`}
-        >
-          {activeTab === 'list' && (
-            <div className="pb-8">
-              <div className="px-3 pb-3">
-                <input
-                  type="text"
-                  placeholder="単語・意味・カタカナ検索"
-                  className="w-full rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5 text-base focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="flex overflow-x-auto px-3 gap-2 scrollbar-hide">
-                {GENRES.map((genre) => (
-                  <button
-                    key={genre}
-                    onClick={() => setSelectedGenre(genre)}
-                    className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                      selectedGenre === genre ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    }`}
-                  >
-                    {genre}
-                  </button>
-                ))}
-              </div>
-              <div className="px-4 py-1 text-right text-[10px] text-gray-400">
-                {filteredWords.length} Words Found
-              </div>
+        {/* 検索・ジャンル（リストモード時のみ） */}
+        {activeTab === 'list' && (
+          <div className="pb-8 bg-white">
+            <div className="px-3 pb-3">
+              <input
+                type="text"
+                placeholder="単語・意味・カタカナ検索"
+                className="w-full rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5 text-base focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-          )}
+            <div className="flex overflow-x-auto px-3 gap-2 scrollbar-hide">
+              {GENRES.map((genre) => (
+                <button
+                  key={genre}
+                  onClick={() => setSelectedGenre(genre)}
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                    selectedGenre === genre ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {genre}
+                </button>
+              ))}
+            </div>
+            <div className="px-4 py-1 text-right text-[10px] text-gray-400">
+              {filteredWords.length} Words Found
+            </div>
+          </div>
+        )}
 
-          {/* 閉じるボタン（ヘッダー内部） */}
-          <div 
-            onClick={toggleHeader}
-            className="absolute bottom-0 left-0 w-full flex justify-center pb-1 cursor-pointer bg-gradient-to-t from-white via-white to-transparent hover:bg-gray-50 transition-colors z-10"
-          >
-            <div className="flex items-center gap-1 text-gray-300 hover:text-blue-500 transition-colors">
-              <span className="text-[9px] font-bold">CLOSE</span>
-              <ChevronUpIcon />
-            </div>
+        {/* 閉じるボタン（ヘッダー内部の下端） */}
+        <div 
+          onClick={toggleHeader}
+          className="absolute bottom-0 left-0 w-full flex justify-center pb-1 cursor-pointer bg-gradient-to-t from-white via-white to-transparent hover:bg-gray-50 transition-colors z-10"
+        >
+          <div className="flex items-center gap-1 text-gray-300 hover:text-blue-500 transition-colors">
+            <span className="text-[9px] font-bold">CLOSE</span>
+            <ChevronUpIcon />
           </div>
         </div>
       </div>
 
-      {/* --- 展開ボタン (ヘッダーが隠れている時だけ表示) --- */}
-      {/* transitionで滑らかに出現させる */}
+      {/* --- 展開（MENU）ボタン (ヘッダーが隠れている時だけ上から降りてくる) --- */}
       <div 
         className={`fixed top-0 left-0 w-full z-40 flex justify-center pointer-events-none transition-transform duration-500 ${
           !isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
@@ -330,13 +317,13 @@ export default function ClientPage({ words }) {
       </div>
 
       {/* --- メインコンテンツエリア --- */}
-      {/* paddingTopを動的に変えることで、ヘッダーの後ろにリストを配置しつつ、ヘッダー開閉に合わせて位置を調整 */}
+      {/* リストの開始位置は固定(paddingTop固定)にして、ガクガク動かないようにする。
+         ヘッダーが消えると、このpadding部分の空間が空き、そこもコンテンツが見えるようになる仕組み。
+      */}
       <div 
         className="transition-all duration-500 ease-in-out"
         style={{
-          paddingTop: activeTab === 'list' 
-            ? (isHeaderVisible ? '230px' : '80px') // ヘッダーの高さに合わせて余白を調整
-            : '80px' // テストモード時はタブのみの高さ
+          paddingTop: activeTab === 'list' ? '240px' : '80px'
         }}
       >
         {activeTab === 'list' && (
@@ -613,7 +600,7 @@ export default function ClientPage({ words }) {
 
       {/* --- スクロールボタン --- */}
       {showScrollBtns && activeTab === 'list' && (
-        <div className={`fixed right-4 z-40 flex flex-col gap-3 animate-fadeIn transition-all duration-500 ${isHeaderVisible ? 'top-[310px]' : 'top-[60px]'}`}>
+        <div className={`fixed right-4 z-40 flex flex-col gap-3 animate-fadeIn transition-all duration-300 ${isHeaderVisible ? 'top-[310px]' : 'top-[60px]'}`}>
           <button
             onClick={scrollToTop}
             className="w-10 h-10 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 active:scale-95 transition-all opacity-80 hover:opacity-100"
