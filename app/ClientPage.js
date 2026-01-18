@@ -87,6 +87,7 @@ export default function ClientPage({ words }) {
     });
   };
 
+  // YouTube ID抽出
   const getYoutubeId = (url) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -94,15 +95,38 @@ export default function ClientPage({ words }) {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
+  // ★追加機能：YouTube開始時間の抽出と変換（t=1m20s -> start=80）
+  const getYoutubeStartTime = (url) => {
+    if (!url) return 0;
+    // ?t=1m20s や &t=80 などを取得
+    const match = url.match(/[?&](t|start)=([^&]+)/);
+    if (!match) return 0;
+    
+    const timeStr = match[2];
+    
+    // 数字だけ（秒数）ならそのまま返す
+    if (!isNaN(timeStr)) return timeStr;
+    
+    // 1h2m30s のような形式を秒数に変換して返す
+    let seconds = 0;
+    const h = timeStr.match(/(\d+)h/);
+    const m = timeStr.match(/(\d+)m/);
+    const s = timeStr.match(/(\d+)s/);
+    
+    if (h) seconds += parseInt(h[1]) * 3600;
+    if (m) seconds += parseInt(m[1]) * 60;
+    if (s) seconds += parseInt(s[1]);
+    
+    return seconds > 0 ? seconds : 0;
+  };
+
   // --- テスト機能 ---
   const startTest = (genre) => {
-    // 1. ジャンルで絞り込み
     let candidates = safeWords;
     if (genre !== 'ALL') {
       candidates = safeWords.filter(w => w.genre === genre);
     }
 
-    // 2. シャッフルして10問抽出
     const shuffled = [...candidates].sort(() => 0.5 - Math.random());
     const selected = shuffled.slice(0, 10);
 
@@ -121,7 +145,7 @@ export default function ClientPage({ words }) {
     e.stopPropagation();
     if (currentQuestionIndex < testQuestions.length - 1) {
       setIsFlipped(false);
-      setTimeout(() => setCurrentQuestionIndex(prev => prev + 1), 150); // アニメーション用ウェイト
+      setTimeout(() => setCurrentQuestionIndex(prev => prev + 1), 150);
     } else {
       setTestPhase('result');
     }
@@ -450,7 +474,7 @@ export default function ClientPage({ words }) {
               <iframe
                 width="100%"
                 height="100%"
-                src={`https://www.youtube.com/embed/${getYoutubeId(videoModalItem.videoUrl)}?autoplay=1`}
+                src={`https://www.youtube.com/embed/${getYoutubeId(videoModalItem.videoUrl)}?autoplay=1&start=${getYoutubeStartTime(videoModalItem.videoUrl)}`}
                 title="YouTube video player"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
