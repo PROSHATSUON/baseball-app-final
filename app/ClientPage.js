@@ -95,9 +95,11 @@ export default function ClientPage({ words }) {
       }
 
       if (activeTab === 'list') {
+        // 一番上付近に来たら自動で展開
         if (currentScrollTop < 10) {
           setIsHeaderVisible(true);
         }
+        // 下にスクロール中 & ある程度下がったら隠す
         else if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 60) {
           setIsHeaderVisible(false);
         }
@@ -312,10 +314,16 @@ export default function ClientPage({ words }) {
       </div>
 
       {/* --- メインコンテンツ --- */}
+      {/* ★ここが修正点★
+        isHeaderVisible が true の時は 240px、
+        false の時は 60px (MENUボタン用の少しの余白) に変化させます。
+      */}
       <div 
         className="transition-all duration-500 ease-in-out"
         style={{
-          paddingTop: activeTab === 'list' ? '240px' : '80px'
+          paddingTop: activeTab === 'list' 
+            ? (isHeaderVisible ? '240px' : '60px') 
+            : '80px'
         }}
       >
         {activeTab === 'list' && (
@@ -386,7 +394,6 @@ export default function ClientPage({ words }) {
                         <div className="pt-2">
                           <button 
                             onClick={(e) => { e.stopPropagation(); setVideoModalItem(item); }}
-                            // ★ここを修正しました：inline-flex, px-4 py-2, text-sm, rounded-full
                             className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-bold rounded-full shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-600 transition-all active:scale-[0.95]"
                           >
                             <VideoIcon />
