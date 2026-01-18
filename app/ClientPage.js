@@ -70,23 +70,41 @@ export default function ClientPage({ words }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // ヘッダー表示制御用
   const [showScrollBtns, setShowScrollBtns] = useState(false);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  
   const audioRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const lastScrollTopRef = useRef(0); // 前回のスクロール位置を記憶
 
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
+  // --- スクロール制御 ---
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const handleScroll = () => {
-      // 50pxスクロールしたら表示
-      if (container.scrollTop > 50) {
+      const currentScrollTop = container.scrollTop;
+      
+      // 1. トップに戻るボタンの制御
+      if (currentScrollTop > 100) {
         setShowScrollBtns(true);
       } else {
         setShowScrollBtns(false);
       }
+
+      // 2. ヘッダーの出し入れ制御（アコーディオン）
+      if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 50) {
+        // 下にスクロール中 & ある程度下がったら隠す
+        setIsHeaderVisible(false);
+      } else {
+        // 上にスクロール中 or 一番上なら表示
+        setIsHeaderVisible(true);
+      }
+      
+      lastScrollTopRef.current = currentScrollTop;
     };
 
     container.addEventListener('scroll', handleScroll);
@@ -201,8 +219,9 @@ export default function ClientPage({ words }) {
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
       {/* --- 固定ヘッダーエリア --- */}
-      <div className="flex-none bg-white z-20 shadow-sm border-b border-gray-200">
-        <div className="px-4 py-3">
+      <div className="flex-none bg-white z-30 shadow-sm border-b border-gray-200 transition-all duration-300 ease-in-out">
+        {/* タブ（これは常に表示） */}
+        <div className="px-4 pt-3 pb-2 relative z-40 bg-white">
           <div className="flex bg-gray-100 p-1 rounded-xl">
             <button
               onClick={() => setActiveTab('list')}
@@ -227,8 +246,14 @@ export default function ClientPage({ words }) {
           </div>
         </div>
 
-        {activeTab === 'list' && (
-          <div className="pb-2">
+        {/* 検索・ジャンル（スクロールで隠れるアコーディオン部分） */}
+        <div 
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            // リストタブで、かつヘッダーが見えている時だけ高さを確保
+            (activeTab === 'list' && isHeaderVisible) ? 'max-h-[120px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="pb-3">
             <div className="px-3 pb-3">
               <input
                 type="text"
@@ -255,7 +280,7 @@ export default function ClientPage({ words }) {
               {filteredWords.length} Words Found
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* --- スクロールエリア --- */}
@@ -482,14 +507,14 @@ export default function ClientPage({ words }) {
         )}
       </div>
 
-      {/* --- 動画モーダル (位置修正版) --- */}
-      {/* items-start と pt-20 で上寄せに配置 */}
+      {/* --- 動画モーダル (色調整済み) --- */}
       {videoModalItem && (
         <div 
-          className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/30 backdrop-blur-md p-4 animate-fadeIn"
+          className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/60 backdrop-blur-md p-4 animate-fadeIn"
           onClick={() => setVideoModalItem(null)}
         >
-          <div className="relative w-full max-w-2xl bg-slate-900 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10" onClick={e => e.stopPropagation()}>
+          {/* モーダル背景を少し明るいダークグレー(bg-slate-800)に変更 */}
+          <div className="relative w-full max-w-2xl bg-slate-800 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10" onClick={e => e.stopPropagation()}>
             <div className="aspect-video bg-black">
               <iframe
                 width="100%"
@@ -502,9 +527,10 @@ export default function ClientPage({ words }) {
               ></iframe>
             </div>
             
-            <div className="p-5 text-white bg-slate-800">
+            <div className="p-5 text-white">
               <div className="flex items-baseline justify-between mb-2">
-                <h3 className="text-xl font-extrabold text-blue-400">
+                {/* 文字色を明るいブルー(text-blue-300)に変更 */}
+                <h3 className="text-xl font-extrabold text-blue-300">
                   {videoModalItem.word}
                   <span className="ml-3 text-sm text-gray-300 font-normal">
                     {videoModalItem.meaning}
@@ -519,9 +545,9 @@ export default function ClientPage({ words }) {
               </div>
 
               {videoModalItem.videoSentence ? (
-                <div className="space-y-2 mt-3 bg-slate-700/50 p-3 rounded-lg border border-slate-600">
+                <div className="space-y-2 mt-3 bg-slate-900/50 p-3 rounded-lg border border-slate-700">
                   <p className="text-lg font-bold text-white leading-snug">"{videoModalItem.videoSentence}"</p>
-                  <p className="text-sm text-gray-300">{videoModalItem.videoTranslation}</p>
+                  <p className="text-sm text-gray-400">{videoModalItem.videoTranslation}</p>
                 </div>
               ) : (
                 <p className="text-sm font-bold mt-1 text-gray-200 opacity-0">{videoModalItem.meaning}</p>
@@ -538,10 +564,10 @@ export default function ClientPage({ words }) {
         </div>
       )}
 
-      {/* --- スクロールボタン (上側・右上配置版) --- */}
-      {/* top-[160px] でヘッダーの下あたりに固定 */}
+      {/* --- スクロールボタン (位置調整) --- */}
       {showScrollBtns && activeTab === 'list' && (
-        <div className="fixed top-[160px] right-4 z-40 flex flex-col gap-3 animate-fadeIn">
+        // ヘッダーが隠れたときはボタン位置も少し上げる調整
+        <div className={`fixed right-4 z-40 flex flex-col gap-3 animate-fadeIn transition-all duration-300 ${isHeaderVisible ? 'top-[180px]' : 'top-[70px]'}`}>
           <button
             onClick={scrollToTop}
             className="w-10 h-10 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 active:scale-95 transition-all opacity-80 hover:opacity-100"
