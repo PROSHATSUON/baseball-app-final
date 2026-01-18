@@ -16,7 +16,7 @@ const PlayIcon = () => (
 );
 
 const VideoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polygon points="23 7 16 12 23 17 23 7"></polygon>
     <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
   </svg>
@@ -75,7 +75,6 @@ export default function ClientPage({ words }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // ヘッダー制御用ステート
   const [showScrollBtns, setShowScrollBtns] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   
@@ -89,20 +88,16 @@ export default function ClientPage({ words }) {
     const handleScroll = () => {
       const currentScrollTop = window.scrollY;
       
-      // 1. トップに戻るボタンの制御
       if (currentScrollTop > 100) {
         setShowScrollBtns(true);
       } else {
         setShowScrollBtns(false);
       }
 
-      // 2. ヘッダーの出し入れ制御
       if (activeTab === 'list') {
-        // 一番上付近に来たら自動で展開
         if (currentScrollTop < 10) {
           setIsHeaderVisible(true);
         }
-        // 下にスクロール中 & ある程度下がったら隠す
         else if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 60) {
           setIsHeaderVisible(false);
         }
@@ -226,7 +221,7 @@ export default function ClientPage({ words }) {
     <div className="min-h-screen font-sans text-gray-800 bg-[#f8f9fa]">
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
-      {/* --- 完全固定ヘッダー（タブも含めてすべて隠す） --- */}
+      {/* --- 完全固定ヘッダー --- */}
       <div 
         className={`fixed top-0 left-0 w-full z-30 bg-white shadow-sm transition-transform duration-500 ease-in-out border-b border-gray-200 ${
           isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
@@ -258,7 +253,7 @@ export default function ClientPage({ words }) {
           </div>
         </div>
 
-        {/* 検索・ジャンル（リストモード時のみ） */}
+        {/* 検索・ジャンル */}
         {activeTab === 'list' && (
           <div className="pb-8 bg-white">
             <div className="px-3 pb-3">
@@ -289,7 +284,7 @@ export default function ClientPage({ words }) {
           </div>
         )}
 
-        {/* 閉じるボタン（ヘッダー内部の下端） */}
+        {/* 閉じるボタン */}
         <div 
           onClick={toggleHeader}
           className="absolute bottom-0 left-0 w-full flex justify-center pb-1 cursor-pointer bg-gradient-to-t from-white via-white to-transparent hover:bg-gray-50 transition-colors z-10"
@@ -301,7 +296,7 @@ export default function ClientPage({ words }) {
         </div>
       </div>
 
-      {/* --- 展開（MENU）ボタン (ヘッダーが隠れている時だけ上から降りてくる) --- */}
+      {/* --- MENUボタン --- */}
       <div 
         className={`fixed top-0 left-0 w-full z-40 flex justify-center pointer-events-none transition-transform duration-500 ${
           !isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
@@ -316,10 +311,7 @@ export default function ClientPage({ words }) {
         </button>
       </div>
 
-      {/* --- メインコンテンツエリア --- */}
-      {/* リストの開始位置は固定(paddingTop固定)にして、ガクガク動かないようにする。
-         ヘッダーが消えると、このpadding部分の空間が空き、そこもコンテンツが見えるようになる仕組み。
-      */}
+      {/* --- メインコンテンツ --- */}
       <div 
         className="transition-all duration-500 ease-in-out"
         style={{
@@ -394,10 +386,11 @@ export default function ClientPage({ words }) {
                         <div className="pt-2">
                           <button 
                             onClick={(e) => { e.stopPropagation(); setVideoModalItem(item); }}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-600 transition-all active:scale-[0.98]"
+                            // ★ここを修正しました：inline-flex, px-4 py-2, text-sm, rounded-full
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-bold rounded-full shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-600 transition-all active:scale-[0.95]"
                           >
                             <VideoIcon />
-                            <span>動画で確認する</span>
+                            <span>動画を視聴</span>
                           </button>
                         </div>
                       )}
