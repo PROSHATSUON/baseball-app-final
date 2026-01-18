@@ -470,7 +470,7 @@ export default function ClientPage({ words }) {
 
       {videoModalItem && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fadeIn"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-md p-4 animate-fadeIn"
           onClick={() => setVideoModalItem(null)}
         >
           <div className="relative w-full max-w-2xl bg-slate-900 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10" onClick={e => e.stopPropagation()}>
@@ -478,7 +478,6 @@ export default function ClientPage({ words }) {
               <iframe
                 width="100%"
                 height="100%"
-                // ★修正：autoplay=1を追加し、allow属性も追加して自動再生の許可を申請します
                 src={`https://www.youtube.com/embed/${getYoutubeId(videoModalItem.videoUrl)}?autoplay=1&start=${getYoutubeStartTime(videoModalItem.videoUrl)}&playsinline=1&rel=0`}
                 title="YouTube video player"
                 frameBorder="0"
