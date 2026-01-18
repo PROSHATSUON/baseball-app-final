@@ -114,11 +114,6 @@ export default function ClientPage({ words }) {
           // 下にスクロール中 & ある程度下がったら隠す
           setIsHeaderVisible(false);
         }
-        // ※上にスクロールしても自動では出さない（ユーザーがボタンで出すと言っているので）
-        // もし「上スクロールでも出してほしい」場合は以下のコメントアウトを外す
-        // else if (currentScrollTop < lastScrollTopRef.current - 10) {
-        //   setIsHeaderVisible(true);
-        // }
       }
       
       lastScrollTopRef.current = currentScrollTop;
@@ -240,9 +235,10 @@ export default function ClientPage({ words }) {
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
       {/* --- アコーディオンヘッダーエリア --- */}
+      {/* max-hとopacityで伸縮させることで、背景ごと消えるように修正 */}
       <div 
-        className={`flex-none bg-white z-30 shadow-sm border-b border-gray-200 transition-all duration-300 ease-in-out relative ${
-          isHeaderVisible ? 'translate-y-0' : '-translate-y-full absolute w-full'
+        className={`flex-none bg-white z-30 shadow-sm transition-all duration-500 ease-in-out overflow-hidden ${
+          isHeaderVisible ? 'max-h-[300px] opacity-100 border-b border-gray-200' : 'max-h-0 opacity-0 border-none'
         }`}
       >
         {/* タブ切り替え */}
@@ -273,7 +269,7 @@ export default function ClientPage({ words }) {
 
         {/* 検索・ジャンル（リストモード時のみ表示） */}
         {activeTab === 'list' && (
-          <div className="pb-3">
+          <div className="pb-8"> {/* 下にボタン用の余白 */}
             <div className="px-3 pb-3">
               <input
                 type="text"
@@ -302,12 +298,15 @@ export default function ClientPage({ words }) {
           </div>
         )}
 
-        {/* 閉じるボタン（ヘッダー下端） */}
+        {/* 閉じるボタン（ヘッダー内部の下端） */}
         <div 
           onClick={toggleHeader}
-          className="absolute bottom-[-24px] left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 border-t-0 rounded-b-xl px-4 py-0.5 cursor-pointer shadow-sm text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors flex items-center gap-1 z-0"
+          className="absolute bottom-0 left-0 w-full flex justify-center pb-1 cursor-pointer bg-gradient-to-t from-white via-white to-transparent hover:bg-gray-50 transition-colors"
         >
-          <ChevronUpIcon />
+          <div className="flex items-center gap-1 text-gray-300 hover:text-blue-500 transition-colors">
+            <span className="text-[9px] font-bold">CLOSE</span>
+            <ChevronUpIcon />
+          </div>
         </div>
       </div>
 
@@ -329,12 +328,10 @@ export default function ClientPage({ words }) {
       {/* --- スクロールエリア --- */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto relative pt-0" // ヘッダーがabsoluteになる場合があるのでpt調整が必要だが、今回は隠れるだけなのでOK
+        className="flex-1 overflow-y-auto relative"
       >
-        {/* ヘッダー分の余白調整（ヘッダーが表示されている時だけ余白を作るのは少し難しいので、Flexboxレイアウトのまま自然に任せるが、隠れた時はコンテンツが上に詰まる） */}
-        
         {activeTab === 'list' && (
-          <div className="p-3 space-y-3 pb-24 pt-4"> {/* ヘッダーとの隙間を少し確保 */}
+          <div className="p-3 space-y-3 pb-24">
             {filteredWords.length === 0 ? (
               <div className="text-center py-20 text-gray-400">見つかりませんでした</div>
             ) : (
@@ -573,7 +570,8 @@ export default function ClientPage({ words }) {
             
             <div className="p-5 text-white">
               <div className="flex items-baseline justify-between mb-2">
-                <h3 className="text-xl font-extrabold text-blue-300">
+                {/* ★ここをオレンジに変更しました */}
+                <h3 className="text-xl font-extrabold text-orange-400">
                   {videoModalItem.word}
                   <span className="ml-3 text-sm text-gray-300 font-normal">
                     {videoModalItem.meaning}
@@ -607,9 +605,9 @@ export default function ClientPage({ words }) {
         </div>
       )}
 
-      {/* --- スクロールボタン (ヘッダーの状態で位置を調整) --- */}
+      {/* --- スクロールボタン --- */}
       {showScrollBtns && activeTab === 'list' && (
-        <div className={`fixed right-4 z-40 flex flex-col gap-3 animate-fadeIn transition-all duration-300 ${isHeaderVisible ? 'top-[200px]' : 'top-[60px]'}`}>
+        <div className={`fixed right-4 z-40 flex flex-col gap-3 animate-fadeIn transition-all duration-300 ${isHeaderVisible ? 'top-[310px]' : 'top-[60px]'}`}>
           <button
             onClick={scrollToTop}
             className="w-10 h-10 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 active:scale-95 transition-all opacity-80 hover:opacity-100"
