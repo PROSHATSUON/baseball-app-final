@@ -95,19 +95,15 @@ export default function ClientPage({ words }) {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  // ★追加機能：YouTube開始時間の抽出と変換（t=1m20s -> start=80）
+  // YouTube開始時間の抽出
   const getYoutubeStartTime = (url) => {
     if (!url) return 0;
-    // ?t=1m20s や &t=80 などを取得
     const match = url.match(/[?&](t|start)=([^&]+)/);
     if (!match) return 0;
     
     const timeStr = match[2];
-    
-    // 数字だけ（秒数）ならそのまま返す
     if (!isNaN(timeStr)) return timeStr;
     
-    // 1h2m30s のような形式を秒数に変換して返す
     let seconds = 0;
     const h = timeStr.match(/(\d+)h/);
     const m = timeStr.match(/(\d+)m/);
@@ -474,19 +470,26 @@ export default function ClientPage({ words }) {
               <iframe
                 width="100%"
                 height="100%"
-                src={`https://www.youtube.com/embed/${getYoutubeId(videoModalItem.videoUrl)}?autoplay=1&start=${getYoutubeStartTime(videoModalItem.videoUrl)}`}
+                // autoplayを削除しました。これで読み込みループが止まります。
+                src={`https://www.youtube.com/embed/${getYoutubeId(videoModalItem.videoUrl)}?start=${getYoutubeStartTime(videoModalItem.videoUrl)}&playsinline=1&rel=0`}
                 title="YouTube video player"
                 frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               ></iframe>
             </div>
             
             <div className="p-5 text-white bg-slate-800">
               <div className="flex items-baseline justify-between mb-2">
-                <h3 className="text-xl font-extrabold text-orange-400">{videoModalItem.word}</h3>
+                {/* ここを変更：単語の横に意味を追加しました */}
+                <h3 className="text-xl font-extrabold text-orange-400">
+                  {videoModalItem.word}
+                  <span className="ml-3 text-sm text-gray-300 font-normal">
+                    {videoModalItem.meaning}
+                  </span>
+                </h3>
                 {videoModalItem.videoTime && (
-                  <div className="flex items-center gap-1 bg-slate-700 px-2 py-1 rounded text-xs font-mono text-gray-300">
+                  <div className="flex items-center gap-1 bg-slate-700 px-2 py-1 rounded text-xs font-mono text-gray-300 flex-shrink-0">
                     <ClockIcon />
                     <span>{videoModalItem.videoTime}</span>
                   </div>
@@ -499,7 +502,8 @@ export default function ClientPage({ words }) {
                   <p className="text-sm text-gray-300">{videoModalItem.videoTranslation}</p>
                 </div>
               ) : (
-                <p className="text-sm font-bold mt-1 text-gray-200">{videoModalItem.meaning}</p>
+                /* ここは意味がヘッダーに出たので削除してもいいですが、念のため残しておきます */
+                <p className="text-sm font-bold mt-1 text-gray-200 opacity-0">{videoModalItem.meaning}</p>
               )}
             </div>
 
