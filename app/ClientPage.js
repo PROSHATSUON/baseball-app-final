@@ -50,6 +50,18 @@ const ArrowDownIcon = () => (
   </svg>
 );
 
+const ChevronDownIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9"></polyline>
+  </svg>
+);
+
+const ChevronUpIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="18 15 12 9 6 15"></polyline>
+  </svg>
+);
+
 const IPA_FONT_STYLE = {
   fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif'
 };
@@ -70,13 +82,13 @@ export default function ClientPage({ words }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // ヘッダー表示制御用
+  // ヘッダー制御用ステート
   const [showScrollBtns, setShowScrollBtns] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   
   const audioRef = useRef(null);
   const scrollContainerRef = useRef(null);
-  const lastScrollTopRef = useRef(0); // 前回のスクロール位置を記憶
+  const lastScrollTopRef = useRef(0);
 
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
@@ -95,13 +107,18 @@ export default function ClientPage({ words }) {
         setShowScrollBtns(false);
       }
 
-      // 2. ヘッダーの出し入れ制御（アコーディオン）
-      if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 50) {
-        // 下にスクロール中 & ある程度下がったら隠す
-        setIsHeaderVisible(false);
-      } else {
-        // 上にスクロール中 or 一番上なら表示
-        setIsHeaderVisible(true);
+      // 2. ヘッダーの出し入れ制御
+      // リストモードのときのみ、スクロールで隠す動作を有効にする
+      if (activeTab === 'list') {
+        if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 60) {
+          // 下にスクロール中 & ある程度下がったら隠す
+          setIsHeaderVisible(false);
+        }
+        // ※上にスクロールしても自動では出さない（ユーザーがボタンで出すと言っているので）
+        // もし「上スクロールでも出してほしい」場合は以下のコメントアウトを外す
+        // else if (currentScrollTop < lastScrollTopRef.current - 10) {
+        //   setIsHeaderVisible(true);
+        // }
       }
       
       lastScrollTopRef.current = currentScrollTop;
@@ -109,7 +126,11 @@ export default function ClientPage({ words }) {
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [activeTab]);
+
+  const toggleHeader = () => {
+    setIsHeaderVisible(!isHeaderVisible);
+  };
 
   const scrollToTop = () => {
     scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -218,10 +239,14 @@ export default function ClientPage({ words }) {
     <div className="h-[100dvh] flex flex-col font-sans text-gray-800 bg-[#f8f9fa] overflow-hidden">
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
-      {/* --- 固定ヘッダーエリア --- */}
-      <div className="flex-none bg-white z-30 shadow-sm border-b border-gray-200 transition-all duration-300 ease-in-out">
-        {/* タブ（これは常に表示） */}
-        <div className="px-4 pt-3 pb-2 relative z-40 bg-white">
+      {/* --- アコーディオンヘッダーエリア --- */}
+      <div 
+        className={`flex-none bg-white z-30 shadow-sm border-b border-gray-200 transition-all duration-300 ease-in-out relative ${
+          isHeaderVisible ? 'translate-y-0' : '-translate-y-full absolute w-full'
+        }`}
+      >
+        {/* タブ切り替え */}
+        <div className="px-4 pt-3 pb-2">
           <div className="flex bg-gray-100 p-1 rounded-xl">
             <button
               onClick={() => setActiveTab('list')}
@@ -246,13 +271,8 @@ export default function ClientPage({ words }) {
           </div>
         </div>
 
-        {/* 検索・ジャンル（スクロールで隠れるアコーディオン部分） */}
-        <div 
-          className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            // リストタブで、かつヘッダーが見えている時だけ高さを確保
-            (activeTab === 'list' && isHeaderVisible) ? 'max-h-[120px] opacity-100' : 'max-h-0 opacity-0'
-          }`}
-        >
+        {/* 検索・ジャンル（リストモード時のみ表示） */}
+        {activeTab === 'list' && (
           <div className="pb-3">
             <div className="px-3 pb-3">
               <input
@@ -280,16 +300,41 @@ export default function ClientPage({ words }) {
               {filteredWords.length} Words Found
             </div>
           </div>
+        )}
+
+        {/* 閉じるボタン（ヘッダー下端） */}
+        <div 
+          onClick={toggleHeader}
+          className="absolute bottom-[-24px] left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 border-t-0 rounded-b-xl px-4 py-0.5 cursor-pointer shadow-sm text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors flex items-center gap-1 z-0"
+        >
+          <ChevronUpIcon />
         </div>
       </div>
+
+      {/* --- 展開ボタン (ヘッダーが隠れている時だけ表示) --- */}
+      {!isHeaderVisible && (
+        <div 
+          className="fixed top-0 left-0 w-full z-40 flex justify-center pointer-events-none"
+        >
+          <button
+            onClick={toggleHeader}
+            className="mt-[-2px] bg-white/90 backdrop-blur-sm border border-gray-200 border-t-0 rounded-b-xl px-6 py-1 shadow-md text-blue-600 hover:bg-blue-50 transition-all pointer-events-auto flex flex-col items-center animate-fadeInDown"
+          >
+            <ChevronDownIcon />
+            <span className="text-[9px] font-bold leading-none mt-0.5">MENU</span>
+          </button>
+        </div>
+      )}
 
       {/* --- スクロールエリア --- */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto relative"
+        className="flex-1 overflow-y-auto relative pt-0" // ヘッダーがabsoluteになる場合があるのでpt調整が必要だが、今回は隠れるだけなのでOK
       >
+        {/* ヘッダー分の余白調整（ヘッダーが表示されている時だけ余白を作るのは少し難しいので、Flexboxレイアウトのまま自然に任せるが、隠れた時はコンテンツが上に詰まる） */}
+        
         {activeTab === 'list' && (
-          <div className="p-3 space-y-3 pb-24">
+          <div className="p-3 space-y-3 pb-24 pt-4"> {/* ヘッダーとの隙間を少し確保 */}
             {filteredWords.length === 0 ? (
               <div className="text-center py-20 text-gray-400">見つかりませんでした</div>
             ) : (
@@ -507,13 +552,12 @@ export default function ClientPage({ words }) {
         )}
       </div>
 
-      {/* --- 動画モーダル (色調整済み) --- */}
+      {/* --- 動画モーダル --- */}
       {videoModalItem && (
         <div 
           className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/60 backdrop-blur-md p-4 animate-fadeIn"
           onClick={() => setVideoModalItem(null)}
         >
-          {/* モーダル背景を少し明るいダークグレー(bg-slate-800)に変更 */}
           <div className="relative w-full max-w-2xl bg-slate-800 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10" onClick={e => e.stopPropagation()}>
             <div className="aspect-video bg-black">
               <iframe
@@ -529,7 +573,6 @@ export default function ClientPage({ words }) {
             
             <div className="p-5 text-white">
               <div className="flex items-baseline justify-between mb-2">
-                {/* 文字色を明るいブルー(text-blue-300)に変更 */}
                 <h3 className="text-xl font-extrabold text-blue-300">
                   {videoModalItem.word}
                   <span className="ml-3 text-sm text-gray-300 font-normal">
@@ -564,10 +607,9 @@ export default function ClientPage({ words }) {
         </div>
       )}
 
-      {/* --- スクロールボタン (位置調整) --- */}
+      {/* --- スクロールボタン (ヘッダーの状態で位置を調整) --- */}
       {showScrollBtns && activeTab === 'list' && (
-        // ヘッダーが隠れたときはボタン位置も少し上げる調整
-        <div className={`fixed right-4 z-40 flex flex-col gap-3 animate-fadeIn transition-all duration-300 ${isHeaderVisible ? 'top-[180px]' : 'top-[70px]'}`}>
+        <div className={`fixed right-4 z-40 flex flex-col gap-3 animate-fadeIn transition-all duration-300 ${isHeaderVisible ? 'top-[200px]' : 'top-[60px]'}`}>
           <button
             onClick={scrollToTop}
             className="w-10 h-10 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 active:scale-95 transition-all opacity-80 hover:opacity-100"
@@ -591,6 +633,11 @@ export default function ClientPage({ words }) {
         .transform-style-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
+        .animate-fadeInDown { animation: fadeInDown 0.3s ease-out; }
+        @keyframes fadeInDown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
     </div>
   );
