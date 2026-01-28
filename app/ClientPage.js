@@ -15,10 +15,11 @@ const FileIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" heigh
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
 // --- ヘルパー関数 ---
+// ★修正点：YouTube Shorts (/shorts/) にも対応した強力な正規表現
 const getYoutubeId = (url) => {
   if (!url) return null;
-  const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
-  return (match && match[2].length === 11) ? match[2] : null;
+  const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=|shorts\/)|youtu\.be\/)([^"&?\/\s]{11})/);
+  return match ? match[1] : null;
 };
 
 // Google DriveのプレビューURL変換
@@ -30,7 +31,7 @@ const getDriveEmbedUrl = (url) => {
   return null;
 };
 
-// --- ★Notionブロックレンダラー（動画・音声・埋め込み強化版） ---
+// --- ★Notionブロックレンダラー（完全版） ---
 const RenderBlock = ({ block }) => {
   const { type } = block;
   const value = block[type];
@@ -41,16 +42,24 @@ const RenderBlock = ({ block }) => {
   const text = value.rich_text ? value.rich_text.map(t => t.plain_text).join('') : '';
   const caption = value.caption ? value.caption.map(t => t.plain_text).join('') : '';
 
-  // 共通のURL取得ロジック
-  const getUrl = () => value.type === 'external' ? value.external?.url : value.file?.url;
+  // URLを取得（あらゆるブロックタイプに対応）
+  let url = value.url || value.external?.url || value.file?.url || "";
 
-  // YouTubeプレーヤー（共通部品）
+  // ★YouTubeプレーヤー（共通部品）
   const YouTubePlayer = ({ id }) => (
     <div className="my-6 rounded-xl overflow-hidden shadow-md aspect-video bg-black relative">
-       <iframe className="absolute top-0 left-0 w-full h-full" src={`https://www.youtube.com/embed/${id}`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+       <iframe className="absolute top-0 left-0 w-full h-full" src={`https://www.youtube.com/embed/${id}?playsinline=1&rel=0`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+       {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
     </div>
   );
 
+  // ★どんなブロックでも、URLがYouTubeならプレイヤー化する魔法の判定
+  const ytId = getYoutubeId(url);
+  if (ytId) {
+    return <YouTubePlayer id={ytId} />;
+  }
+
+  // ブロックごとの処理
   switch (type) {
     case 'heading_1': return <h2 className="text-2xl font-black text-slate-800 mt-8 mb-4 border-b pb-2 border-blue-200">{text}</h2>;
     case 'heading_2': return <h3 className="text-xl font-bold text-slate-700 mt-6 mb-3 border-l-4 border-blue-500 pl-3">{text}</h3>;
@@ -66,7 +75,7 @@ const RenderBlock = ({ block }) => {
       return (
         <figure className="my-6">
           <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100">
-            <img src={getUrl()} alt="Article Image" className="w-full h-auto" />
+            <img src={url} alt="Article Image" className="w-full h-auto" />
           </div>
           {caption && <figcaption className="text-center text-xs text-gray-400 mt-2">{caption}</figcaption>}
         </figure>
@@ -78,22 +87,16 @@ const RenderBlock = ({ block }) => {
         <div className="my-5 p-3 bg-blue-50 rounded-xl border border-blue-100 flex flex-col gap-2">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white flex-shrink-0"><SpeakerIcon /></div>
-             <audio controls src={getUrl()} className="w-full h-10 focus:outline-none" />
+             <audio controls src={url} className="w-full h-10 focus:outline-none" />
           </div>
           {caption && <p className="text-xs text-slate-500 text-center">{caption}</p>}
         </div>
       );
 
-    // 動画 (videoブロック)
+    // 動画 (videoブロック) - YouTube以外
     case 'video':
-      const videoUrl = getUrl();
-      const ytId = getYoutubeId(videoUrl);
-      
-      // YouTubeならIframe
-      if (ytId) return <YouTubePlayer id={ytId} />;
-      
       // Google DriveならPreview
-      const driveUrl = getDriveEmbedUrl(videoUrl);
+      const driveUrl = getDriveEmbedUrl(url);
       if (driveUrl) {
          return (
           <div className="my-6 rounded-xl overflow-hidden shadow-md aspect-video bg-black relative">
@@ -101,58 +104,49 @@ const RenderBlock = ({ block }) => {
           </div>
          );
       }
-
       // 通常の動画ファイル (mp4/mov)
       return (
         <div className="my-6">
-          <video controls playsInline src={videoUrl} className="w-full rounded-xl shadow-sm bg-black" />
+          <video controls playsInline src={url} className="w-full rounded-xl shadow-sm bg-black" />
           {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
         </div>
       );
 
-    // 埋め込み (embedブロック) ★ここを強化！
+    // 埋め込み (embedブロック)
     case 'embed':
-      const embedUrl = value.url;
-      const embedYtId = getYoutubeId(embedUrl);
-
-      // Embedブロックだけど中身はYouTubeだった場合
-      if (embedYtId) return <YouTubePlayer id={embedYtId} />;
-
       return (
         <div className="my-6 rounded-xl overflow-hidden border border-gray-200 shadow-sm aspect-video relative">
-           <iframe src={embedUrl} className="absolute top-0 left-0 w-full h-full" title="Embed" frameBorder="0" allowFullScreen></iframe>
+           <iframe src={url} className="absolute top-0 left-0 w-full h-full" title="Embed" frameBorder="0" allowFullScreen></iframe>
            {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
         </div>
       );
 
-    // ファイルブロック (file)
+    // ファイル (file) - 音声/動画ファイルへの対応
     case 'file':
-      const fileUrl = getUrl();
-      // URLから拡張子判定（クエリパラメータ除去）
-      const cleanUrl = fileUrl?.split('?')[0].toLowerCase() || "";
+      const cleanUrl = url?.split('?')[0].toLowerCase() || "";
       const fileName = value.caption?.[0]?.plain_text || "Attached File";
 
       // 音声ファイル判定
-      if (cleanUrl.endsWith('.mp3') || cleanUrl.endsWith('.wav') || cleanUrl.endsWith('.m4a') || cleanUrl.endsWith('.aac')) {
+      if (['.mp3', '.wav', '.m4a', '.aac'].some(ext => cleanUrl.endsWith(ext))) {
         return (
           <div className="my-5 p-3 bg-green-50 rounded-xl border border-green-100 flex flex-col gap-2">
             <div className="text-xs font-bold text-green-600 mb-1">AUDIO FILE</div>
-            <audio controls src={fileUrl} className="w-full h-10 focus:outline-none" />
+            <audio controls src={url} className="w-full h-10 focus:outline-none" />
           </div>
         );
       }
       // 動画ファイル判定
-      if (cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm')) {
+      if (['.mp4', '.mov', '.webm'].some(ext => cleanUrl.endsWith(ext))) {
         return (
           <div className="my-6">
-            <video controls playsInline src={fileUrl} className="w-full rounded-xl shadow-sm bg-black" />
+            <video controls playsInline src={url} className="w-full rounded-xl shadow-sm bg-black" />
           </div>
         );
       }
       
       // それ以外
       return (
-        <a href={fileUrl} target="_blank" rel="noreferrer" className="block my-4 p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-3">
+        <a href={url} target="_blank" rel="noreferrer" className="block my-4 p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-3">
           <div className="p-2 bg-white rounded-lg shadow-sm text-gray-500"><FileIcon /></div>
           <div className="flex-1">
             <div className="text-sm font-bold text-slate-700">{fileName}</div>
@@ -162,22 +156,35 @@ const RenderBlock = ({ block }) => {
         </a>
       );
 
+    // ★ブックマーク (bookmark) - これが罠！
     case 'bookmark':
+      // 上ですでにYouTubeチェックは終わっているので、ここに来るのは普通のリンクだけ
       return (
-        <a href={value.url} target="_blank" rel="noreferrer" className="block my-4 overflow-hidden bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all">
+        <a href={url} target="_blank" rel="noreferrer" className="block my-4 overflow-hidden bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all">
           <div className="p-4">
-             <div className="text-xs text-gray-400 mb-1 truncate">{value.url}</div>
+             <div className="text-xs text-gray-400 mb-1 truncate">{url}</div>
              <div className="text-sm font-bold text-blue-600 flex items-center gap-1">Bookmark Link <ExternalLinkIcon /></div>
           </div>
         </a>
       );
 
+    // ★未対応のブロック (デバッグ用)
     default:
-      return <div className="my-2 p-2 bg-red-50 text-red-500 text-xs border border-red-200 rounded">【未対応ブロック】: {type}</div>;
+      return (
+        <div className="my-2 p-3 bg-red-50 text-red-600 text-xs border border-red-200 rounded">
+          <p className="font-bold">【表示エラー】未対応のブロックです: {type}</p>
+          <pre className="mt-1 text-[10px] overflow-x-auto">{JSON.stringify(block, null, 2)}</pre>
+        </div>
+      );
   }
 };
 
 export default function ClientPage({ words, posts }) {
+  // === ClientPageの残りの部分（state定義など）は変更なし。
+  // ここから下はさっきと同じ内容でOKですが、念のため全文が必要なら貼り付けますか？
+  // 長くなるので、RenderBlockだけ書き換えても動きますが、
+  // 不安なら「ClientPage全体」を再送します！
+  
   const safeWords = (words && Array.isArray(words)) ? words : [];
   const safePosts = (posts && Array.isArray(posts)) ? posts : [];
 
@@ -240,12 +247,6 @@ export default function ClientPage({ words, posts }) {
     return parseInt(match[2]) || 0;
   };
   
-  const getYoutubeId = (url) => {
-    if (!url) return null;
-    const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
-    return (match && match[2].length === 11) ? match[2] : null;
-  };
-
   const startTest = (genre) => {
     let candidates = genre === 'ALL' ? safeWords : safeWords.filter(w => w.genre === genre);
     const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10);
@@ -360,7 +361,6 @@ export default function ClientPage({ words, posts }) {
         {/* === テストモード === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
-            {/* テスト用のコード */}
             {testPhase === 'select' ? (
               <div className="flex-1 flex flex-col justify-center items-center space-y-6 animate-fadeIn py-10">
                 <h2 className="text-2xl font-black text-slate-800 text-center"><span className="text-blue-600 block text-lg mb-1">TEST MODE</span>ジャンルを選択</h2>
