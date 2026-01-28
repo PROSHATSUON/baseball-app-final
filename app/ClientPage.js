@@ -90,6 +90,16 @@ export default function ClientPage({ words, posts }) {
   const lastScrollTopRef = useRef(0);
   const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
 
+  // モーダル表示時のスクロールロック
+  useEffect(() => {
+    if (blogModalPost || videoModalItem) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [blogModalPost, videoModalItem]);
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollTop = window.scrollY;
@@ -174,7 +184,8 @@ export default function ClientPage({ words, posts }) {
           <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
             {['list', 'test', 'blog'].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === tab ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-                {tab === 'list' ? '単語リスト' : tab === 'test' ? 'テストモード' : 'ブログ'}
+                {/* ★ここを「ブログ」から「コラム」に変更しました */}
+                {tab === 'list' ? '単語リスト' : tab === 'test' ? 'テストモード' : 'コラム'}
               </button>
             ))}
           </div>
@@ -247,7 +258,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* === ★テストモード (デザイン修正版) === */}
+        {/* === テストモード (ボタン上配置＆正方形カード) === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
@@ -260,19 +271,26 @@ export default function ClientPage({ words, posts }) {
             ) : testPhase === 'playing' ? (
               <div className="flex-1 flex flex-col max-w-md mx-auto w-full relative py-4 items-center">
                 {/* 進行バー */}
-                <div className="w-full mb-6">
+                <div className="w-full mb-4">
                    <div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span>Question {currentQuestionIndex + 1}</span><span>{testQuestions.length}</span></div>
                    <div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
                 </div>
 
-                {/* ★カード本体 (サイズと配置を修正) */}
-                <div className="relative w-full aspect-[4/5] perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
+                {/* ボタンをカードの上に配置 */}
+                <div className="mb-6 w-full">
+                  <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">
+                    {currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}
+                  </button>
+                </div>
+
+                {/* カード本体 (正方形・コンパクト化) */}
+                <div className="relative w-full aspect-square perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
                   <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                     
                     {/* 表面 (Question) */}
                     <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100">
                       <span className="text-xs font-bold text-blue-500 tracking-widest mb-4">TAP TO FLIP</span>
-                      <h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight">{testQuestions[currentQuestionIndex].word}</h3>
+                      <h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight break-words max-w-full">{testQuestions[currentQuestionIndex].word}</h3>
                       <div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
                       {testQuestions[currentQuestionIndex].audioUrl && <button onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)} className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm border border-blue-100 active:scale-90"><SpeakerIcon /></button>}
                     </div>
@@ -281,7 +299,7 @@ export default function ClientPage({ words, posts }) {
                     <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-800 text-white flex flex-col items-center justify-center p-8 text-center rounded-3xl shadow-xl overflow-hidden">
                       <div className="w-full h-full overflow-y-auto flex flex-col items-center justify-center scrollbar-hide">
                         <span className="text-xs font-bold text-gray-400 mb-4 tracking-widest">ANSWER</span>
-                        <div className="text-2xl font-bold mb-6 leading-snug">{testQuestions[currentQuestionIndex].meaning}</div>
+                        <div className="text-2xl font-bold mb-6 leading-snug break-words max-w-full">{testQuestions[currentQuestionIndex].meaning}</div>
                         {testQuestions[currentQuestionIndex].example && (
                           <div className="bg-slate-700/50 p-4 rounded-xl border border-slate-600 w-full text-left">
                             <p className="text-sm font-medium italic text-gray-200 mb-2">"{testQuestions[currentQuestionIndex].example}"</p>
@@ -294,8 +312,6 @@ export default function ClientPage({ words, posts }) {
                   </div>
                 </div>
 
-                {/* 次へボタン */}
-                <div className="mt-8 w-full"><button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all hover:bg-blue-700">{currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}</button></div>
               </div>
             ) : (
               <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 animate-fadeIn py-10">
@@ -310,10 +326,10 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* === ブログタブ === */}
+        {/* === コラム（ブログ）タブ === */}
         {activeTab === 'blog' && (
           <div className="p-3 space-y-3 pb-24">
-            {safePosts.length === 0 ? <div className="text-center py-20 text-gray-400">No Articles</div> : 
+            {safePosts.length === 0 ? <div className="text-center py-20 text-gray-400">No Columns</div> : 
               safePosts.map((post) => (
                 <div key={post.id} onClick={() => setBlogModalPost(post)} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all active:scale-[0.99] overflow-hidden group cursor-pointer">
                   <div className="p-5">
@@ -347,7 +363,7 @@ export default function ClientPage({ words, posts }) {
         </div>
       )}
 
-      {/* --- ブログ記事モーダル --- */}
+      {/* --- コラム記事モーダル (Notionボタン削除済み・スクロール対策済み) --- */}
       {blogModalPost && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6 bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={() => setBlogModalPost(null)}>
           <div className="bg-white w-full max-w-2xl h-[90vh] sm:h-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
@@ -358,17 +374,14 @@ export default function ClientPage({ words, posts }) {
               </div>
               <button onClick={() => setBlogModalPost(null)} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">✕</button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-white scrollbar-hide">
+            {/* スクロール対策 (overscroll-contain) */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-white overscroll-contain">
               {blogModalPost.content && blogModalPost.content.length > 0 ? (
                 blogModalPost.content.map(block => <RenderBlock key={block.id} block={block} />)
               ) : (
-                <div className="text-center py-10 text-gray-400">記事の読み込みに失敗しました、または本文がありません。<br/><a href={blogModalPost.url} target="_blank" className="text-blue-500 underline mt-2 block">Notionで開く</a></div>
+                <div className="text-center py-10 text-gray-400">記事の読み込みに失敗しました、または本文がありません。</div>
               )}
-              <div className="mt-10 pt-6 border-t border-gray-100 text-center">
-                <a href={blogModalPost.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-bold text-gray-400 hover:text-blue-600 transition-colors">
-                  <span>Notionで元の記事を見る</span><ExternalLinkIcon />
-                </a>
-              </div>
+              <div className="pb-10"></div>
             </div>
           </div>
         </div>
