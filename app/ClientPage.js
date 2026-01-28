@@ -4,7 +4,6 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 // --- アイコン ---
 const SpeakerIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>);
 const PlayIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>);
-const VideoIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>);
 const ArrowUpIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>);
 const ArrowDownIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>);
 const ChevronDownIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>);
@@ -13,7 +12,7 @@ const ExternalLinkIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="1
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
-// --- ★シンプル版 ブロックレンダラー ---
+// --- シンプル版 ブロックレンダラー ---
 const RenderBlock = ({ block }) => {
   const { type } = block;
   const value = block[type];
@@ -26,7 +25,6 @@ const RenderBlock = ({ block }) => {
   const url = value.url || value.external?.url || value.file?.url || "";
 
   switch (type) {
-    // === テキスト関連 (表示) ===
     case 'heading_1': return <h2 className="text-2xl font-black text-slate-800 mt-8 mb-4 border-b pb-2 border-blue-200">{text}</h2>;
     case 'heading_2': return <h3 className="text-xl font-bold text-slate-700 mt-6 mb-3 border-l-4 border-blue-500 pl-3">{text}</h3>;
     case 'heading_3': return <h4 className="text-lg font-bold text-slate-700 mt-4 mb-2">{text}</h4>;
@@ -35,7 +33,6 @@ const RenderBlock = ({ block }) => {
     case 'numbered_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-decimal pl-1">{text}</li>;
     case 'quote': return <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-500 my-4 bg-gray-50 py-3 pr-2 text-sm rounded-r">{text}</blockquote>;
     
-    // === 画像 (表示) ===
     case 'image': 
       return (
         <figure className="my-6">
@@ -46,43 +43,26 @@ const RenderBlock = ({ block }) => {
         </figure>
       );
 
-    // === 音声 (表示) ===
     case 'audio':
       return (
-        <div className="my-5 p-3 bg-blue-50 rounded-xl border border-blue-100 flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-             <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white flex-shrink-0"><SpeakerIcon /></div>
-             <audio controls src={url} className="w-full h-10 focus:outline-none" />
-          </div>
-          {caption && <p className="text-xs text-slate-500 text-center">{caption}</p>}
+        <div className="my-6">
+           <audio controls src={url} className="w-full h-10 focus:outline-none" />
+           {caption && <p className="text-xs text-slate-500 text-center mt-1">{caption}</p>}
         </div>
       );
 
-    // === ファイル (音声だけ選別して表示) ===
     case 'file':
       const cleanUrl = url?.split('?')[0].toLowerCase() || "";
-      // 音声拡張子のリスト
       const audioExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg'];
-      
-      // 音声ファイルなら表示
       if (audioExtensions.some(ext => cleanUrl.endsWith(ext))) {
         return (
-          <div className="my-5 p-3 bg-green-50 rounded-xl border border-green-100 flex flex-col gap-2">
-            <div className="text-xs font-bold text-green-600 mb-1">AUDIO FILE</div>
+          <div className="my-6">
             <audio controls src={url} className="w-full h-10 focus:outline-none" />
           </div>
         );
       }
-      // 音声以外は何も表示しない (null)
       return null;
 
-    // === 動画・埋め込み・ブックマーク・その他 (すべて非表示) ===
-    case 'video': return null;
-    case 'embed': return null;
-    case 'bookmark': return null;
-    case 'pdf': return null;
-
-    // 未対応ブロックも静かに無視
     default: return null;
   }
 };
@@ -142,7 +122,7 @@ export default function ClientPage({ words, posts }) {
     audioRef.current.load();
     audioRef.current.play().catch(console.error);
   };
-
+  
   const getYoutubeStartTime = (url) => {
     if (!url) return 0;
     const match = url.match(/[?&](t|start)=([^&]+)/);
@@ -199,7 +179,7 @@ export default function ClientPage({ words, posts }) {
             ))}
           </div>
         </div>
-        {/* 検索バー (List Only) */}
+        {/* 検索バー */}
         <div className={`overflow-hidden transition-all duration-500 ease-in-out bg-white ${(activeTab === 'list') ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="pb-8">
             <div className="px-3 pb-3">
@@ -267,7 +247,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* === テストモード === */}
+        {/* === ★テストモード (デザイン修正版) === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
@@ -278,32 +258,53 @@ export default function ClientPage({ words, posts }) {
                 </div>
               </div>
             ) : testPhase === 'playing' ? (
-              <div className="flex-1 flex flex-col max-w-md mx-auto w-full relative py-4">
-                <div className="mb-4 flex justify-between text-xs font-bold text-gray-400"><span>Q {currentQuestionIndex + 1}</span><span>{testQuestions.length}</span></div>
-                <div className="h-2 bg-gray-200 rounded-full mb-4"><div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
-                <div className="flex-1 min-h-[400px] relative perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
-                  <div className={`relative w-full h-full transition-all duration-500 transform-style-3d shadow-xl rounded-2xl bg-white border border-gray-200 ${isFlipped ? 'rotate-y-180' : ''}`}>
-                    <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10">
-                      <span className="text-xs font-bold text-blue-600 mb-2">TAP TO FLIP</span>
-                      <h3 className="text-4xl font-black text-slate-800 mb-4">{testQuestions[currentQuestionIndex].word}</h3>
-                      <div className="flex gap-3 justify-center mb-8"><span className="bg-gray-100 px-2 py-1 rounded text-sm font-mono" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
-                      {testQuestions[currentQuestionIndex].audioUrl && <button onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)} className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shadow-md active:scale-90"><SpeakerIcon /></button>}
+              <div className="flex-1 flex flex-col max-w-md mx-auto w-full relative py-4 items-center">
+                {/* 進行バー */}
+                <div className="w-full mb-6">
+                   <div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span>Question {currentQuestionIndex + 1}</span><span>{testQuestions.length}</span></div>
+                   <div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
+                </div>
+
+                {/* ★カード本体 (サイズと配置を修正) */}
+                <div className="relative w-full aspect-[4/5] perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
+                  <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+                    
+                    {/* 表面 (Question) */}
+                    <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100">
+                      <span className="text-xs font-bold text-blue-500 tracking-widest mb-4">TAP TO FLIP</span>
+                      <h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight">{testQuestions[currentQuestionIndex].word}</h3>
+                      <div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
+                      {testQuestions[currentQuestionIndex].audioUrl && <button onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)} className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm border border-blue-100 active:scale-90"><SpeakerIcon /></button>}
                     </div>
-                    <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-50 flex flex-col items-center justify-center p-6 text-center rounded-2xl overflow-y-auto">
-                      <span className="text-xs font-bold text-gray-400 mb-4">ANSWER</span>
-                      <div className="text-2xl font-bold text-slate-800 mb-6">{testQuestions[currentQuestionIndex].meaning}</div>
-                      {testQuestions[currentQuestionIndex].example && <div className="bg-white p-4 rounded-xl border border-gray-200 w-full text-left shadow-sm text-sm">"{testQuestions[currentQuestionIndex].example}"</div>}
+
+                    {/* 裏面 (Answer) */}
+                    <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-800 text-white flex flex-col items-center justify-center p-8 text-center rounded-3xl shadow-xl overflow-hidden">
+                      <div className="w-full h-full overflow-y-auto flex flex-col items-center justify-center scrollbar-hide">
+                        <span className="text-xs font-bold text-gray-400 mb-4 tracking-widest">ANSWER</span>
+                        <div className="text-2xl font-bold mb-6 leading-snug">{testQuestions[currentQuestionIndex].meaning}</div>
+                        {testQuestions[currentQuestionIndex].example && (
+                          <div className="bg-slate-700/50 p-4 rounded-xl border border-slate-600 w-full text-left">
+                            <p className="text-sm font-medium italic text-gray-200 mb-2">"{testQuestions[currentQuestionIndex].example}"</p>
+                            {testQuestions[currentQuestionIndex].exampleTranslation && <p className="text-xs text-gray-400 border-t border-slate-600 pt-2">{testQuestions[currentQuestionIndex].exampleTranslation}</p>}
+                          </div>
+                        )}
+                      </div>
                     </div>
+
                   </div>
                 </div>
-                <div className="mt-6 flex justify-center"><button onClick={nextCard} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95">{currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}</button></div>
+
+                {/* 次へボタン */}
+                <div className="mt-8 w-full"><button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all hover:bg-blue-700">{currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}</button></div>
               </div>
             ) : (
               <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 animate-fadeIn py-10">
-                <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mb-2">🎉</div>
+                <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mb-4 shadow-sm">🎉</div>
                 <h2 className="text-3xl font-black text-slate-800">Test Completed!</h2>
-                <button onClick={restartTest} className="w-full max-w-xs bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95">もう一度テストする</button>
-                <button onClick={() => setActiveTab('list')} className="text-gray-400 font-bold text-sm">単語リストに戻る</button>
+                <div className="flex flex-col w-full max-w-xs gap-3">
+                  <button onClick={restartTest} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95">もう一度テストする</button>
+                  <button onClick={() => setActiveTab('list')} className="text-gray-400 font-bold text-sm py-2">単語リストに戻る</button>
+                </div>
               </div>
             )}
           </div>
@@ -350,7 +351,6 @@ export default function ClientPage({ words, posts }) {
       {blogModalPost && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6 bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={() => setBlogModalPost(null)}>
           <div className="bg-white w-full max-w-2xl h-[90vh] sm:h-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            {/* ヘッダー */}
             <div className="p-5 border-b border-gray-100 bg-white z-10 flex justify-between items-start sticky top-0">
               <div>
                 <div className="flex gap-2 text-xs text-gray-400 mb-2 font-mono"><span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">{blogModalPost.tag}</span><span>{blogModalPost.date}</span></div>
@@ -358,14 +358,12 @@ export default function ClientPage({ words, posts }) {
               </div>
               <button onClick={() => setBlogModalPost(null)} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">✕</button>
             </div>
-            {/* 記事本文 */}
             <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-white scrollbar-hide">
               {blogModalPost.content && blogModalPost.content.length > 0 ? (
                 blogModalPost.content.map(block => <RenderBlock key={block.id} block={block} />)
               ) : (
                 <div className="text-center py-10 text-gray-400">記事の読み込みに失敗しました、または本文がありません。<br/><a href={blogModalPost.url} target="_blank" className="text-blue-500 underline mt-2 block">Notionで開く</a></div>
               )}
-              {/* 記事下部アクション */}
               <div className="mt-10 pt-6 border-t border-gray-100 text-center">
                 <a href={blogModalPost.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-bold text-gray-400 hover:text-blue-600 transition-colors">
                   <span>Notionで元の記事を見る</span><ExternalLinkIcon />
