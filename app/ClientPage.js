@@ -88,7 +88,9 @@ export default function ClientPage({ words, posts }) {
   
   const audioRef = useRef(null);
   const lastScrollTopRef = useRef(0);
-  const GENRES = ["ALL", "基本用語", "打撃/走塁", "投球/守備", "頻出表現"];
+  
+  // ★ここを変更しました！
+  const GENRES = ["ALL", "打撃・走塁", "投球・守備", "成績・契約", "実況", "SNS"];
 
   // モーダル表示時のスクロールロック
   useEffect(() => {
@@ -149,7 +151,7 @@ export default function ClientPage({ words, posts }) {
   const startTest = (genre) => {
     let candidates = genre === 'ALL' ? safeWords : safeWords.filter(w => w.genre === genre);
     const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10);
-    if (selected.length === 0) return alert("単語がありません");
+    if (selected.length === 0) return alert("このジャンルの単語がありません");
     setTestQuestions(selected);
     setCurrentQuestionIndex(0);
     setIsFlipped(false);
@@ -184,7 +186,6 @@ export default function ClientPage({ words, posts }) {
           <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
             {['list', 'test', 'blog'].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === tab ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-                {/* ★ここを「ブログ」から「コラム」に変更しました */}
                 {tab === 'list' ? '単語リスト' : tab === 'test' ? 'テストモード' : 'コラム'}
               </button>
             ))}
@@ -363,7 +364,7 @@ export default function ClientPage({ words, posts }) {
         </div>
       )}
 
-      {/* --- コラム記事モーダル (Notionボタン削除済み・スクロール対策済み) --- */}
+      {/* --- コラム記事モーダル --- */}
       {blogModalPost && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6 bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={() => setBlogModalPost(null)}>
           <div className="bg-white w-full max-w-2xl h-[90vh] sm:h-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
@@ -374,7 +375,6 @@ export default function ClientPage({ words, posts }) {
               </div>
               <button onClick={() => setBlogModalPost(null)} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">✕</button>
             </div>
-            {/* スクロール対策 (overscroll-contain) */}
             <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-white overscroll-contain">
               {blogModalPost.content && blogModalPost.content.length > 0 ? (
                 blogModalPost.content.map(block => <RenderBlock key={block.id} block={block} />)
