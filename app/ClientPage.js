@@ -55,14 +55,25 @@ const ChevronUpIcon = () => (
   </svg>
 );
 
+// 
+const ExternalLinkIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+    <polyline points="15 3 21 3 21 9"></polyline>
+    <line x1="10" y1="14" x2="21" y2="3"></line>
+  </svg>
+);
+
 const IPA_FONT_STYLE = {
   fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif'
 };
 
 // --------------------
 
-export default function ClientPage({ words }) {
+export default function ClientPage({ words, posts }) {
   const safeWords = (words && Array.isArray(words)) ? words : [];
+  // ★追加: ブログデータの安全な受け取り
+  const safePosts = (posts && Array.isArray(posts)) ? posts : [];
 
   const [activeTab, setActiveTab] = useState('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -103,6 +114,9 @@ export default function ClientPage({ words }) {
         else if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 60) {
           setIsHeaderVisible(false);
         }
+      } else {
+        // ★修正: リスト以外（テスト・ブログ）の時はヘッダーを常に表示しておく
+        setIsHeaderVisible(true);
       }
       
       lastScrollTopRef.current = currentScrollTop;
@@ -226,15 +240,15 @@ export default function ClientPage({ words }) {
       {/* --- 完全固定ヘッダー --- */}
       <div 
         className={`fixed top-0 left-0 w-full z-30 bg-white shadow-sm transition-transform duration-500 ease-in-out border-b border-gray-200 ${
-          isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+          (activeTab === 'list' && !isHeaderVisible) ? '-translate-y-full' : 'translate-y-0'
         }`}
       >
-        {/* タブ切り替え */}
+        {/* タブ切り替え（3つに増えました） */}
         <div className="px-4 pt-3 pb-2 bg-white relative z-20">
-          <div className="flex bg-gray-100 p-1 rounded-xl">
+          <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
             <button
               onClick={() => setActiveTab('list')}
-              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                 activeTab === 'list' 
                   ? 'bg-white text-blue-700 shadow-sm' 
                   : 'text-gray-400 hover:text-gray-600'
@@ -244,7 +258,7 @@ export default function ClientPage({ words }) {
             </button>
             <button
               onClick={() => setActiveTab('test')}
-              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                 activeTab === 'test' 
                   ? 'bg-white text-blue-700 shadow-sm' 
                   : 'text-gray-400 hover:text-gray-600'
@@ -252,12 +266,27 @@ export default function ClientPage({ words }) {
             >
               テストモード
             </button>
+            {/* ★追加: ブログタブ */}
+            <button
+              onClick={() => setActiveTab('blog')}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                activeTab === 'blog' 
+                  ? 'bg-white text-blue-700 shadow-sm' 
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              ブログ
+            </button>
           </div>
         </div>
 
-        {/* 検索・ジャンル */}
-        {activeTab === 'list' && (
-          <div className="pb-8 bg-white">
+        {/* 検索・ジャンル（リストモード時のみ表示） */}
+        <div 
+          className={`overflow-hidden transition-all duration-500 ease-in-out bg-white ${
+            (activeTab === 'list') ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="pb-8">
             <div className="px-3 pb-3">
               <input
                 type="text"
@@ -284,24 +313,24 @@ export default function ClientPage({ words }) {
               {filteredWords.length} Words Found
             </div>
           </div>
-        )}
 
-        {/* 閉じるボタン */}
-        <div 
-          onClick={toggleHeader}
-          className="absolute bottom-0 left-0 w-full flex justify-center pb-1 cursor-pointer bg-gradient-to-t from-white via-white to-transparent hover:bg-gray-50 transition-colors z-10"
-        >
-          <div className="flex items-center gap-1 text-gray-300 hover:text-blue-500 transition-colors">
-            <span className="text-[9px] font-bold">CLOSE</span>
-            <ChevronUpIcon />
+          {/* 閉じるボタン */}
+          <div 
+            onClick={toggleHeader}
+            className="absolute bottom-0 left-0 w-full flex justify-center pb-1 cursor-pointer bg-gradient-to-t from-white via-white to-transparent hover:bg-gray-50 transition-colors z-10"
+          >
+            <div className="flex items-center gap-1 text-gray-300 hover:text-blue-500 transition-colors">
+              <span className="text-[9px] font-bold">CLOSE</span>
+              <ChevronUpIcon />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* --- MENUボタン --- */}
+      {/* --- MENUボタン (ヘッダーが隠れている時だけ) --- */}
       <div 
         className={`fixed top-0 left-0 w-full z-40 flex justify-center pointer-events-none transition-transform duration-500 ${
-          !isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+          (activeTab === 'list' && !isHeaderVisible) ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
         <button
@@ -314,16 +343,12 @@ export default function ClientPage({ words }) {
       </div>
 
       {/* --- メインコンテンツ --- */}
-      {/* ★ここが修正点★
-        isHeaderVisible が true の時は 240px、
-        false の時は 60px (MENUボタン用の少しの余白) に変化させます。
-      */}
       <div 
         className="transition-all duration-500 ease-in-out"
         style={{
           paddingTop: activeTab === 'list' 
             ? (isHeaderVisible ? '240px' : '60px') 
-            : '80px'
+            : '80px' // テストとブログはタブの高さ分
         }}
       >
         {activeTab === 'list' && (
@@ -538,6 +563,49 @@ export default function ClientPage({ words }) {
                   単語リストに戻る
                 </button>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* === ★追加: ブログタブ === */}
+        {activeTab === 'blog' && (
+          <div className="p-3 space-y-3 pb-24">
+            {safePosts.length === 0 ? (
+               <div className="text-center py-20 text-gray-400">
+                 <p className="font-bold mb-2">No Articles</p>
+                 <p className="text-xs">Notionの記事が見つかりませんでした。</p>
+               </div>
+            ) : (
+              safePosts.map((post) => (
+                <a 
+                  key={post.id}
+                  href={post.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all active:scale-[0.99] overflow-hidden group"
+                >
+                  <div className="p-5">
+                    <div className="flex items-center gap-2 text-xs text-gray-400 mb-2 font-mono">
+                      <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                        {post.tag}
+                      </span>
+                      <span>{post.date}</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 mb-2 leading-snug group-hover:text-blue-700 transition-colors">
+                      {post.title}
+                    </h3>
+                    {post.summary && (
+                      <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
+                        {post.summary}
+                      </p>
+                    )}
+                    <div className="mt-3 flex items-center gap-1 text-xs font-bold text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
+                      <span>READ MORE</span>
+                      <ExternalLinkIcon />
+                    </div>
+                  </div>
+                </a>
+              ))
             )}
           </div>
         )}

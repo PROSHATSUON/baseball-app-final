@@ -1,15 +1,16 @@
 import ClientPage from './ClientPage';
 
-// 【追加】これを書くとビルドエラーが消え、常に最新データを取得するようになります
+// 常に最新データを取得する設定
 export const dynamic = 'force-dynamic';
 
-export default async function Home() {
+// ==========================================
+// 1. 既存の単語データを取得する関数（ロジック変更なし）
+// ==========================================
+async function getWords() {
   const databaseId = process.env.NOTION_DB_ID;
   const apiKey = process.env.NOTION_API_KEY;
 
-  if (!databaseId || !apiKey) {
-    return <div className="p-10 text-red-600 font-bold">Error: 環境変数（APIキー/DB ID）が設定されていません</div>;
-  }
+  if (!databaseId || !apiKey) return [];
 
   let allResults = [];
   let hasMore = true;
@@ -40,7 +41,8 @@ export default async function Home() {
       startCursor = data.next_cursor;
     }
 
-    const results = allResults.map((page) => {
+    // マッピング処理（既存のまま）
+    return allResults.map((page) => {
       const p = page.properties;
       
       let audioLink = '';
@@ -76,10 +78,72 @@ export default async function Home() {
       };
     });
 
-    return <ClientPage words={results || []} />;
+  } catch (error) {
+    console.error("Word Fetch Error:", error);
+    return [];
+  }
+}
+
+// ==========================================
+// 2. 新規：ブログデータを取得する関数
+// ==========================================
+async function getBlogPosts() {
+  // ★ブログ用のDB IDを環境変数から取得
+  const blogDatabaseId = process.env.NOTION_BLOG_DB_ID; 
+  const apiKey = process.env.NOTION_API_KEY; // APIキーは共通でOK
+
+  if (!blogDatabaseId || !apiKey) return [];
+
+  try {
+    const res = await fetch(`https://api.notion.com/v1/databases/${blogDatabaseId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sorts: [
+          { property: 'Date', direction: 'descending' }, // 日付の新しい順
+        ],
+        filter: {
+          property: 'Title',
+          title: { is_not_empty: true }, // タイトルがあるものだけ
+        },
+      }),
+      next: { revalidate: 0 }
+    });
+
+    if (!res.ok) throw new Error(`Notion Blog API Error: ${res.status}`);
+
+    const data = await res.json();
+
+    return data.results.map((page) => {
+      const p = page.properties;
+      return {
+        id: page.id,
+        // Notionの列名に合わせて取得（Title, Date, Tag, Summary）
+        title: p['Title']?.title?.[0]?.plain_text || 'No Title',
+        date: p['Date']?.date?.start || '',
+        tag: p['Tag']?.select?.name || 'Blog',
+        summary: p['Summary']?.rich_text?.[0]?.plain_text || '',
+        url: page.url, // Notionページへのリンク
+      };
+    });
 
   } catch (error) {
-    console.error(error);
-    return <div className="p-10 text-red-600">データの読み込みに失敗しました: {error.message}</div>;
+    console.error("Blog Fetch Error:", error);
+    return [];
   }
+}
+
+// ==========================================
+// メインコンポーネント
+// ==========================================
+export default async function Home() {
+  // 単語とブログを並行して取得
+  const [words, posts] = await Promise.all([getWords(), getBlogPosts()]);
+
+  // ClientPageに両方を渡す
+  return <ClientPage words={words} posts={posts} />;
 }
