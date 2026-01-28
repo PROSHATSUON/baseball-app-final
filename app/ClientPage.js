@@ -10,28 +10,10 @@ const ArrowDownIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" 
 const ChevronDownIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>);
 const ChevronUpIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>);
 const ExternalLinkIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>);
-const FileIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
-// --- ヘルパー関数 ---
-// ★修正点：YouTube Shorts (/shorts/) にも対応した強力な正規表現
-const getYoutubeId = (url) => {
-  if (!url) return null;
-  const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=|shorts\/)|youtu\.be\/)([^"&?\/\s]{11})/);
-  return match ? match[1] : null;
-};
-
-// Google DriveのプレビューURL変換
-const getDriveEmbedUrl = (url) => {
-  if (!url) return null;
-  if (url.includes('drive.google.com') && url.includes('/view')) {
-    return url.replace('/view', '/preview');
-  }
-  return null;
-};
-
-// --- ★Notionブロックレンダラー（完全版） ---
+// --- ★シンプル版 ブロックレンダラー ---
 const RenderBlock = ({ block }) => {
   const { type } = block;
   const value = block[type];
@@ -41,26 +23,10 @@ const RenderBlock = ({ block }) => {
   
   const text = value.rich_text ? value.rich_text.map(t => t.plain_text).join('') : '';
   const caption = value.caption ? value.caption.map(t => t.plain_text).join('') : '';
+  const url = value.url || value.external?.url || value.file?.url || "";
 
-  // URLを取得（あらゆるブロックタイプに対応）
-  let url = value.url || value.external?.url || value.file?.url || "";
-
-  // ★YouTubeプレーヤー（共通部品）
-  const YouTubePlayer = ({ id }) => (
-    <div className="my-6 rounded-xl overflow-hidden shadow-md aspect-video bg-black relative">
-       <iframe className="absolute top-0 left-0 w-full h-full" src={`https://www.youtube.com/embed/${id}?playsinline=1&rel=0`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
-       {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
-    </div>
-  );
-
-  // ★どんなブロックでも、URLがYouTubeならプレイヤー化する魔法の判定
-  const ytId = getYoutubeId(url);
-  if (ytId) {
-    return <YouTubePlayer id={ytId} />;
-  }
-
-  // ブロックごとの処理
   switch (type) {
+    // === テキスト関連 (表示) ===
     case 'heading_1': return <h2 className="text-2xl font-black text-slate-800 mt-8 mb-4 border-b pb-2 border-blue-200">{text}</h2>;
     case 'heading_2': return <h3 className="text-xl font-bold text-slate-700 mt-6 mb-3 border-l-4 border-blue-500 pl-3">{text}</h3>;
     case 'heading_3': return <h4 className="text-lg font-bold text-slate-700 mt-4 mb-2">{text}</h4>;
@@ -68,9 +34,8 @@ const RenderBlock = ({ block }) => {
     case 'bulleted_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-disc pl-1">{text}</li>;
     case 'numbered_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-decimal pl-1">{text}</li>;
     case 'quote': return <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-500 my-4 bg-gray-50 py-3 pr-2 text-sm rounded-r">{text}</blockquote>;
-    case 'divider': return <hr className="my-6 border-gray-200" />;
     
-    // 画像
+    // === 画像 (表示) ===
     case 'image': 
       return (
         <figure className="my-6">
@@ -81,7 +46,7 @@ const RenderBlock = ({ block }) => {
         </figure>
       );
 
-    // 音声 (audioブロック)
+    // === 音声 (表示) ===
     case 'audio':
       return (
         <div className="my-5 p-3 bg-blue-50 rounded-xl border border-blue-100 flex flex-col gap-2">
@@ -93,41 +58,14 @@ const RenderBlock = ({ block }) => {
         </div>
       );
 
-    // 動画 (videoブロック) - YouTube以外
-    case 'video':
-      // Google DriveならPreview
-      const driveUrl = getDriveEmbedUrl(url);
-      if (driveUrl) {
-         return (
-          <div className="my-6 rounded-xl overflow-hidden shadow-md aspect-video bg-black relative">
-            <iframe src={driveUrl} className="absolute top-0 left-0 w-full h-full" allow="autoplay"></iframe>
-          </div>
-         );
-      }
-      // 通常の動画ファイル (mp4/mov)
-      return (
-        <div className="my-6">
-          <video controls playsInline src={url} className="w-full rounded-xl shadow-sm bg-black" />
-          {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
-        </div>
-      );
-
-    // 埋め込み (embedブロック)
-    case 'embed':
-      return (
-        <div className="my-6 rounded-xl overflow-hidden border border-gray-200 shadow-sm aspect-video relative">
-           <iframe src={url} className="absolute top-0 left-0 w-full h-full" title="Embed" frameBorder="0" allowFullScreen></iframe>
-           {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
-        </div>
-      );
-
-    // ファイル (file) - 音声/動画ファイルへの対応
+    // === ファイル (音声だけ選別して表示) ===
     case 'file':
       const cleanUrl = url?.split('?')[0].toLowerCase() || "";
-      const fileName = value.caption?.[0]?.plain_text || "Attached File";
-
-      // 音声ファイル判定
-      if (['.mp3', '.wav', '.m4a', '.aac'].some(ext => cleanUrl.endsWith(ext))) {
+      // 音声拡張子のリスト
+      const audioExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg'];
+      
+      // 音声ファイルなら表示
+      if (audioExtensions.some(ext => cleanUrl.endsWith(ext))) {
         return (
           <div className="my-5 p-3 bg-green-50 rounded-xl border border-green-100 flex flex-col gap-2">
             <div className="text-xs font-bold text-green-600 mb-1">AUDIO FILE</div>
@@ -135,56 +73,21 @@ const RenderBlock = ({ block }) => {
           </div>
         );
       }
-      // 動画ファイル判定
-      if (['.mp4', '.mov', '.webm'].some(ext => cleanUrl.endsWith(ext))) {
-        return (
-          <div className="my-6">
-            <video controls playsInline src={url} className="w-full rounded-xl shadow-sm bg-black" />
-          </div>
-        );
-      }
-      
-      // それ以外
-      return (
-        <a href={url} target="_blank" rel="noreferrer" className="block my-4 p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-3">
-          <div className="p-2 bg-white rounded-lg shadow-sm text-gray-500"><FileIcon /></div>
-          <div className="flex-1">
-            <div className="text-sm font-bold text-slate-700">{fileName}</div>
-            <div className="text-xs text-blue-500">Tap to open</div>
-          </div>
-          <ExternalLinkIcon />
-        </a>
-      );
+      // 音声以外は何も表示しない (null)
+      return null;
 
-    // ★ブックマーク (bookmark) - これが罠！
-    case 'bookmark':
-      // 上ですでにYouTubeチェックは終わっているので、ここに来るのは普通のリンクだけ
-      return (
-        <a href={url} target="_blank" rel="noreferrer" className="block my-4 overflow-hidden bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all">
-          <div className="p-4">
-             <div className="text-xs text-gray-400 mb-1 truncate">{url}</div>
-             <div className="text-sm font-bold text-blue-600 flex items-center gap-1">Bookmark Link <ExternalLinkIcon /></div>
-          </div>
-        </a>
-      );
+    // === 動画・埋め込み・ブックマーク・その他 (すべて非表示) ===
+    case 'video': return null;
+    case 'embed': return null;
+    case 'bookmark': return null;
+    case 'pdf': return null;
 
-    // ★未対応のブロック (デバッグ用)
-    default:
-      return (
-        <div className="my-2 p-3 bg-red-50 text-red-600 text-xs border border-red-200 rounded">
-          <p className="font-bold">【表示エラー】未対応のブロックです: {type}</p>
-          <pre className="mt-1 text-[10px] overflow-x-auto">{JSON.stringify(block, null, 2)}</pre>
-        </div>
-      );
+    // 未対応ブロックも静かに無視
+    default: return null;
   }
 };
 
 export default function ClientPage({ words, posts }) {
-  // === ClientPageの残りの部分（state定義など）は変更なし。
-  // ここから下はさっきと同じ内容でOKですが、念のため全文が必要なら貼り付けますか？
-  // 長くなるので、RenderBlockだけ書き換えても動きますが、
-  // 不安なら「ClientPage全体」を再送します！
-  
   const safeWords = (words && Array.isArray(words)) ? words : [];
   const safePosts = (posts && Array.isArray(posts)) ? posts : [];
 
@@ -239,14 +142,20 @@ export default function ClientPage({ words, posts }) {
     audioRef.current.load();
     audioRef.current.play().catch(console.error);
   };
-  
+
   const getYoutubeStartTime = (url) => {
     if (!url) return 0;
     const match = url.match(/[?&](t|start)=([^&]+)/);
     if (!match) return 0;
     return parseInt(match[2]) || 0;
   };
-  
+
+  const getYoutubeId = (url) => {
+    if (!url) return null;
+    const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
   const startTest = (genre) => {
     let candidates = genre === 'ALL' ? safeWords : safeWords.filter(w => w.genre === genre);
     const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10);
@@ -424,7 +333,7 @@ export default function ClientPage({ words, posts }) {
         )}
       </div>
 
-      {/* --- 動画モーダル --- */}
+      {/* --- 動画モーダル (単語帳用) --- */}
       {videoModalItem && (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/80 backdrop-blur-sm p-4 animate-fadeIn" onClick={() => setVideoModalItem(null)}>
           <div className="relative w-full max-w-2xl bg-slate-800 rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -437,7 +346,7 @@ export default function ClientPage({ words, posts }) {
         </div>
       )}
 
-      {/* --- ★ブログ記事モーダル --- */}
+      {/* --- ブログ記事モーダル --- */}
       {blogModalPost && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6 bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={() => setBlogModalPost(null)}>
           <div className="bg-white w-full max-w-2xl h-[90vh] sm:h-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
