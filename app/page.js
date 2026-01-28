@@ -3,46 +3,43 @@ import { Client } from '@notionhq/client';
 
 export const dynamic = 'force-dynamic';
 
-// --- 単語取得 (既存のまま) ---
 async function getWords() {
   const databaseId = process.env.NOTION_DB_ID;
   const apiKey = process.env.NOTION_API_KEY;
-  if (!databaseId || !apiKey) return [];
 
-  let allResults = [];
-  let hasMore = true;
-  let startCursor = undefined;
+  if (!databaseId || !apiKey) {
+    console.error("【エラー】単語帳のIDまたはAPIキーが設定されていません");
+    return [];
+  }
 
   try {
-    while (hasMore) {
-      const res = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sorts: [{ property: '単語', direction: 'ascending' }],
-          page_size: 100,
-          start_cursor: startCursor,
-        }),
-        next: { revalidate: 0 }
-      });
+    const res = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        page_size: 100,
+        sorts: [{ property: '単語', direction: 'ascending' }],
+      }),
+      next: { revalidate: 0 }
+    });
 
-      if (!res.ok) throw new Error(`Notion API Error: ${res.status}`);
-      const data = await res.json();
-      allResults = [...allResults, ...data.results];
-      hasMore = data.has_more;
-      startCursor = data.next_cursor;
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`【単語取得エラー】Notion APIがエラーを返しました: ${res.status} - ${errorText}`);
+      throw new Error(`API Error: ${res.status}`);
     }
 
-    return allResults.map((page) => {
+    const data = await res.json();
+    return data.results.map((page) => {
       const p = page.properties;
-      const getFile = (prop) => prop?.files?.[0]?.file?.url || prop?.files?.[0]?.external?.url || prop?.url || '';
       const getText = (prop) => prop?.rich_text?.[0]?.plain_text || '';
       const getTitle = (prop) => prop?.title?.[0]?.plain_text || 'No Title';
       const getSelect = (prop) => prop?.select?.name || '';
+      const getFile = (prop) => prop?.files?.[0]?.file?.url || prop?.files?.[0]?.external?.url || prop?.url || '';
 
       return {
         id: page.id,
@@ -65,57 +62,67 @@ async function getWords() {
       };
     });
   } catch (error) {
-    console.error("Word Fetch Error:", error);
+    console.error("【単語取得クラッシュ】", error);
     return [];
   }
 }
 
-// --- ブログ取得 (20件 & 中身取得) ---
 async function getBlogPosts() {
   const blogDatabaseId = process.env.NOTION_BLOG_DB_ID; 
   const apiKey = process.env.NOTION_API_KEY;
-  if (!blogDatabaseId || !apiKey) return [];
+
+  if (!blogDatabaseId) {
+    console.error("【エラー】ブログDBのID (NOTION_BLOG_DB_ID) がVercelに設定されていません！");
+    return [];
+  }
 
   const notion = new Client({ auth: apiKey });
 
   try {
-    // 記事一覧を取得（20件）
+    console.log("ブログ記事の取得を開始します...");
     const response = await notion.databases.query({
       database_id: blogDatabaseId,
-      page_size: 20, // ★20件に変更
+      page_size: 20,
       sorts: [{ property: 'Date', direction: 'descending' }],
-      filter: { property: 'Title', title: { is_not_empty: true } },
+      // フィルターを一時的に外して、とにかくデータが取れるかテスト
     });
 
-    // 中身（ブロック）を並行取得
+    console.log(`ブログ記事が ${response.results.length} 件見つかりました。`);
+
     const postsWithContent = await Promise.all(
       response.results.map(async (page) => {
         const p = page.properties;
+        
+        // 列の名前チェックログ
+        if (!p['Title']) console.warn(`【警告】記事ID: ${page.id} に 'Title' という列が見つかりません。Notionの列名を確認してください。`);
+
         let contentBlocks = [];
         try {
           const blocksRes = await notion.blocks.children.list({
             block_id: page.id,
-            page_size: 50, // 記事が長い場合、最初の50ブロックまで
+            page_size: 50,
           });
           contentBlocks = blocksRes.results;
         } catch (e) {
-          console.error(`Block fetch error: ${page.id}`);
+          console.error(`【ブロック取得エラー】記事ID: ${page.id} の中身が取れませんでした。`, e.message);
         }
 
         return {
           id: page.id,
-          title: p['Title']?.title?.[0]?.plain_text || 'No Title',
+          title: p['Title']?.title?.[0]?.plain_text || 'No Title (列名違いの可能性)',
           date: p['Date']?.date?.start || '',
           tag: p['Tag']?.select?.name || 'Blog',
           summary: p['Summary']?.rich_text?.[0]?.plain_text || '',
           url: page.url,
-          content: contentBlocks, // 中身データ
+          content: contentBlocks,
         };
       })
     );
+
     return postsWithContent;
+
   } catch (error) {
-    console.error("Blog Fetch Error:", error);
+    console.error("【ブログ取得・重大エラー】:", error.body || error);
     return [];
   }
 }
