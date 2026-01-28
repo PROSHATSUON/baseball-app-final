@@ -21,12 +21,20 @@ const getYoutubeId = (url) => {
   return (match && match[2].length === 11) ? match[2] : null;
 };
 
-// --- ★Notionブロックレンダラー（デバッグ機能付き） ---
+// Google DriveのプレビューURL変換
+const getDriveEmbedUrl = (url) => {
+  if (!url) return null;
+  if (url.includes('drive.google.com') && url.includes('/view')) {
+    return url.replace('/view', '/preview');
+  }
+  return null;
+};
+
+// --- ★Notionブロックレンダラー（動画・音声・埋め込み強化版） ---
 const RenderBlock = ({ block }) => {
-  const { type, id } = block;
+  const { type } = block;
   const value = block[type];
   
-  // 値がない場合はスキップ（区切り線などは値がないことがあるので例外処理）
   if (type === 'divider') return <hr className="my-6 border-gray-200" />;
   if (!value) return null;
   
@@ -35,6 +43,13 @@ const RenderBlock = ({ block }) => {
 
   // 共通のURL取得ロジック
   const getUrl = () => value.type === 'external' ? value.external?.url : value.file?.url;
+
+  // YouTubeプレーヤー（共通部品）
+  const YouTubePlayer = ({ id }) => (
+    <div className="my-6 rounded-xl overflow-hidden shadow-md aspect-video bg-black relative">
+       <iframe className="absolute top-0 left-0 w-full h-full" src={`https://www.youtube.com/embed/${id}`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+    </div>
+  );
 
   switch (type) {
     case 'heading_1': return <h2 className="text-2xl font-black text-slate-800 mt-8 mb-4 border-b pb-2 border-blue-200">{text}</h2>;
@@ -73,39 +88,52 @@ const RenderBlock = ({ block }) => {
     case 'video':
       const videoUrl = getUrl();
       const ytId = getYoutubeId(videoUrl);
-      if (ytId) {
-        return (
+      
+      // YouTubeならIframe
+      if (ytId) return <YouTubePlayer id={ytId} />;
+      
+      // Google DriveならPreview
+      const driveUrl = getDriveEmbedUrl(videoUrl);
+      if (driveUrl) {
+         return (
           <div className="my-6 rounded-xl overflow-hidden shadow-md aspect-video bg-black relative">
-             <iframe className="absolute top-0 left-0 w-full h-full" src={`https://www.youtube.com/embed/${ytId}`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+            <iframe src={driveUrl} className="absolute top-0 left-0 w-full h-full" allow="autoplay"></iframe>
           </div>
-        );
-      } else {
-        return (
-          <div className="my-6">
-            <video controls src={videoUrl} className="w-full rounded-xl shadow-sm bg-black" />
-            {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
-          </div>
-        );
+         );
       }
 
-    // 埋め込み (embedブロック)
+      // 通常の動画ファイル (mp4/mov)
+      return (
+        <div className="my-6">
+          <video controls playsInline src={videoUrl} className="w-full rounded-xl shadow-sm bg-black" />
+          {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
+        </div>
+      );
+
+    // 埋め込み (embedブロック) ★ここを強化！
     case 'embed':
+      const embedUrl = value.url;
+      const embedYtId = getYoutubeId(embedUrl);
+
+      // Embedブロックだけど中身はYouTubeだった場合
+      if (embedYtId) return <YouTubePlayer id={embedYtId} />;
+
       return (
         <div className="my-6 rounded-xl overflow-hidden border border-gray-200 shadow-sm aspect-video relative">
-           <iframe src={value.url} className="absolute top-0 left-0 w-full h-full" title="Embed" frameBorder="0" allowFullScreen></iframe>
+           <iframe src={embedUrl} className="absolute top-0 left-0 w-full h-full" title="Embed" frameBorder="0" allowFullScreen></iframe>
            {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
         </div>
       );
 
-    // ★重要: ファイルブロック (file)
-    // 音声や動画を「/audio」ではなく、単にドラッグ＆ドロップすると「file」扱いになることがあります
+    // ファイルブロック (file)
     case 'file':
       const fileUrl = getUrl();
-      const ext = fileUrl?.split('?')[0].split('.').pop()?.toLowerCase();
+      // URLから拡張子判定（クエリパラメータ除去）
+      const cleanUrl = fileUrl?.split('?')[0].toLowerCase() || "";
       const fileName = value.caption?.[0]?.plain_text || "Attached File";
 
-      // 拡張子が mp3, wav, m4a ならオーディオプレイヤーを表示
-      if (['mp3', 'wav', 'm4a', 'aac'].includes(ext)) {
+      // 音声ファイル判定
+      if (cleanUrl.endsWith('.mp3') || cleanUrl.endsWith('.wav') || cleanUrl.endsWith('.m4a') || cleanUrl.endsWith('.aac')) {
         return (
           <div className="my-5 p-3 bg-green-50 rounded-xl border border-green-100 flex flex-col gap-2">
             <div className="text-xs font-bold text-green-600 mb-1">AUDIO FILE</div>
@@ -113,15 +141,16 @@ const RenderBlock = ({ block }) => {
           </div>
         );
       }
-      // 拡張子が mp4, mov なら動画プレイヤーを表示
-      if (['mp4', 'mov', 'webm'].includes(ext)) {
+      // 動画ファイル判定
+      if (cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm')) {
         return (
           <div className="my-6">
-            <video controls src={fileUrl} className="w-full rounded-xl shadow-sm bg-black" />
+            <video controls playsInline src={fileUrl} className="w-full rounded-xl shadow-sm bg-black" />
           </div>
         );
       }
-      // それ以外はダウンロードリンク
+      
+      // それ以外
       return (
         <a href={fileUrl} target="_blank" rel="noreferrer" className="block my-4 p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-3">
           <div className="p-2 bg-white rounded-lg shadow-sm text-gray-500"><FileIcon /></div>
@@ -133,7 +162,6 @@ const RenderBlock = ({ block }) => {
         </a>
       );
 
-    // リンクプレビュー (bookmark)
     case 'bookmark':
       return (
         <a href={value.url} target="_blank" rel="noreferrer" className="block my-4 overflow-hidden bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all">
@@ -144,8 +172,6 @@ const RenderBlock = ({ block }) => {
         </a>
       );
 
-    // ★未対応のブロック (デバッグ用)
-    // ここで「column_list」などが出たら、入れ子になっているのが原因
     default:
       return <div className="my-2 p-2 bg-red-50 text-red-500 text-xs border border-red-200 rounded">【未対応ブロック】: {type}</div>;
   }
@@ -334,7 +360,7 @@ export default function ClientPage({ words, posts }) {
         {/* === テストモード === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
-            {/* テスト用のコードは省略せずそのまま */}
+            {/* テスト用のコード */}
             {testPhase === 'select' ? (
               <div className="flex-1 flex flex-col justify-center items-center space-y-6 animate-fadeIn py-10">
                 <h2 className="text-2xl font-black text-slate-800 text-center"><span className="text-blue-600 block text-lg mb-1">TEST MODE</span>ジャンルを選択</h2>
