@@ -5,7 +5,6 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 const SpeakerIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>);
 const PlayIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>);
 const VideoIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>);
-const ClockIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>);
 const ArrowUpIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>);
 const ArrowDownIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>);
 const ChevronDownIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>);
@@ -14,25 +13,89 @@ const ExternalLinkIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="1
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
-// --- Notionブロックレンダラー ---
+// --- ヘルパー関数 ---
+const getYoutubeId = (url) => {
+  if (!url) return null;
+  const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
+
+// --- ★Notionブロックレンダラー（音声・動画対応版） ---
 const RenderBlock = ({ block }) => {
   const { type } = block;
   const value = block[type];
   if (!value) return null;
   
-  const text = value.rich_text?.map(t => t.plain_text).join('') || '';
+  const text = value.rich_text ? value.rich_text.map(t => t.plain_text).join('') : '';
+  const caption = value.caption ? value.caption.map(t => t.plain_text).join('') : '';
 
   switch (type) {
-    case 'heading_1': return <h2 className="text-2xl font-black text-slate-800 mt-6 mb-3 border-b pb-1 border-blue-200">{text}</h2>;
-    case 'heading_2': return <h3 className="text-xl font-bold text-slate-700 mt-5 mb-2 border-l-4 border-blue-500 pl-3">{text}</h3>;
+    case 'heading_1': return <h2 className="text-2xl font-black text-slate-800 mt-8 mb-4 border-b pb-2 border-blue-200">{text}</h2>;
+    case 'heading_2': return <h3 className="text-xl font-bold text-slate-700 mt-6 mb-3 border-l-4 border-blue-500 pl-3">{text}</h3>;
     case 'heading_3': return <h4 className="text-lg font-bold text-slate-700 mt-4 mb-2">{text}</h4>;
-    case 'paragraph': return <p className="text-slate-600 mb-3 leading-relaxed text-sm whitespace-pre-wrap">{text}</p>;
+    case 'paragraph': return <p className="text-slate-600 mb-4 leading-relaxed text-sm whitespace-pre-wrap">{text}</p>;
     case 'bulleted_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-disc pl-1">{text}</li>;
     case 'numbered_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-decimal pl-1">{text}</li>;
-    case 'quote': return <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-500 my-3 bg-gray-50 py-2 pr-2 text-sm">{text}</blockquote>;
+    case 'quote': return <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-500 my-4 bg-gray-50 py-3 pr-2 text-sm rounded-r">{text}</blockquote>;
+    
+    // ★画像
     case 'image': 
-      const src = value.type === 'external' ? value.external.url : value.file.url;
-      return <div className="my-4 rounded-xl overflow-hidden shadow-sm border border-gray-100"><img src={src} alt="Article Image" className="w-full h-auto" /></div>;
+      const imgSrc = value.type === 'external' ? value.external.url : value.file.url;
+      return (
+        <figure className="my-6">
+          <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100">
+            <img src={imgSrc} alt="Article Image" className="w-full h-auto" />
+          </div>
+          {caption && <figcaption className="text-center text-xs text-gray-400 mt-2">{caption}</figcaption>}
+        </figure>
+      );
+
+    // ★音声 (Audio)
+    case 'audio':
+      const audioSrc = value.type === 'external' ? value.external.url : value.file.url;
+      return (
+        <div className="my-5 p-3 bg-blue-50 rounded-xl border border-blue-100 flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white flex-shrink-0"><SpeakerIcon /></div>
+             <audio controls src={audioSrc} className="w-full h-10 focus:outline-none" />
+          </div>
+          {caption && <p className="text-xs text-slate-500 text-center">{caption}</p>}
+        </div>
+      );
+
+    // ★動画 (Video & YouTube)
+    case 'video':
+      const videoUrl = value.type === 'external' ? value.external.url : value.file.url;
+      const ytId = getYoutubeId(videoUrl);
+      
+      if (ytId) {
+        // YouTubeの場合
+        return (
+          <div className="my-6 rounded-xl overflow-hidden shadow-md">
+             <div className="aspect-video bg-black">
+               <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${ytId}`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+             </div>
+          </div>
+        );
+      } else {
+        // 普通の動画ファイルの場合
+        return (
+          <div className="my-6">
+            <video controls src={videoUrl} className="w-full rounded-xl shadow-sm bg-black" />
+            {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
+          </div>
+        );
+      }
+
+    // ★その他の埋め込み (Embed)
+    case 'embed':
+      return (
+        <div className="my-6 rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+           <iframe src={value.url} className="w-full aspect-video" title="Embed" frameBorder="0" allowFullScreen></iframe>
+           {caption && <p className="text-xs text-gray-400 mt-2 text-center">{caption}</p>}
+        </div>
+      );
+      
     default: return null;
   }
 };
@@ -95,12 +158,6 @@ export default function ClientPage({ words, posts }) {
     audioRef.current.src = playUrl;
     audioRef.current.load();
     audioRef.current.play().catch(console.error);
-  };
-
-  const getYoutubeId = (url) => {
-    if (!url) return null;
-    const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
-    return (match && match[2].length === 11) ? match[2] : null;
   };
   
   const getYoutubeStartTime = (url) => {
