@@ -9,8 +9,6 @@ const ArrowDownIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" 
 const ChevronDownIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>);
 const ChevronUpIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>);
 const ExternalLinkIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>);
-// ★追加: 背景用のダイヤモンドアイコン
-const DiamondBgIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor" className="w-full h-full opacity-[0.06] text-blue-500 pointer-events-none"><polygon points="50,5 95,50 50,95 5,50" /></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
@@ -93,7 +91,6 @@ export default function ClientPage({ words, posts }) {
   
   const GENRES = ["ALL", "打撃・走塁", "投球・守備", "成績・契約", "実況", "SNS"];
 
-  // モーダル表示時のスクロールロック
   useEffect(() => {
     if (blogModalPost || videoModalItem) {
       document.body.style.overflow = 'hidden';
@@ -182,6 +179,7 @@ export default function ClientPage({ words, posts }) {
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
       {/* ヘッダー */}
+      {/* 2行になってもいいように少しパディングを広げました (260px) */}
       <div className={`fixed top-0 left-0 w-full z-30 bg-white shadow-sm transition-transform duration-500 ease-in-out border-b border-gray-200 ${(activeTab === 'list' && !isHeaderVisible) ? '-translate-y-full' : 'translate-y-0'}`}>
         <div className="px-4 pt-3 pb-2 bg-white relative z-20">
           <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
@@ -199,6 +197,7 @@ export default function ClientPage({ words, posts }) {
               <input type="text" placeholder="単語・意味・カタカナ検索" className="w-full rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5 text-base focus:bg-white focus:border-blue-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
             
+            {/* ★ここを変更！横スクロール(overflow-x-auto)をやめて、折り返し(flex-wrap)にしました */}
             <div className="flex flex-wrap justify-center px-3 gap-2">
               {GENRES.map((genre) => (
                 <button key={genre} onClick={() => setSelectedGenre(genre)} className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-colors mb-1 ${selectedGenre === genre ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{genre}</button>
@@ -218,7 +217,7 @@ export default function ClientPage({ words, posts }) {
         <button onClick={toggleHeader} className="mt-[-2px] bg-white/90 backdrop-blur-sm border border-gray-200 border-t-0 rounded-b-xl px-6 py-1 shadow-md text-blue-600 pointer-events-auto flex flex-col items-center"><ChevronDownIcon /><span className="text-[9px] font-bold mt-0.5">MENU</span></button>
       </div>
 
-      {/* メインエリア */}
+      {/* メインエリア (パディングを少し増やして調整 240px -> 260px) */}
       <div className="transition-all duration-500 ease-in-out" style={{ paddingTop: activeTab === 'list' ? (isHeaderVisible ? '260px' : '60px') : '80px' }}>
         
         {/* === 単語リスト === */}
@@ -262,7 +261,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* === テストモード (ボタン上配置＆正方形カード) === */}
+        {/* === テストモード === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
@@ -274,53 +273,39 @@ export default function ClientPage({ words, posts }) {
               </div>
             ) : testPhase === 'playing' ? (
               <div className="flex-1 flex flex-col max-w-md mx-auto w-full relative py-4 items-center">
-                {/* 進行バー */}
                 <div className="w-full mb-4">
                    <div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span>Question {currentQuestionIndex + 1}</span><span>{testQuestions.length}</span></div>
                    <div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
                 </div>
 
-                {/* ボタンをカードの上に配置 */}
                 <div className="mb-6 w-full">
                   <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">
                     {currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}
                   </button>
                 </div>
 
-                {/* カード本体 (正方形・コンパクト化) */}
                 <div className="relative w-full aspect-square perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
                   <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-                    
-                    {/* 表面 (Question) */}
                     <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100">
                       <span className="text-xs font-bold text-blue-500 tracking-widest mb-4">TAP TO FLIP</span>
                       <h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight break-words max-w-full">{testQuestions[currentQuestionIndex].word}</h3>
                       <div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
                       {testQuestions[currentQuestionIndex].audioUrl && <button onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)} className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm border border-blue-100 active:scale-90"><SpeakerIcon /></button>}
                     </div>
-
-                    {/* ★裏面 (Answer) - ここを変更！白背景＆ダイヤモンドイラスト */}
-                    <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white text-slate-800 flex flex-col items-center justify-center p-8 text-center rounded-3xl shadow-xl border-2 border-slate-100 overflow-hidden relative">
-                      {/* 背景イラスト (絶対配置で背面に置く) */}
-                      <div className="absolute inset-0 flex items-center justify-center p-12 z-0">
-                         <DiamondBgIcon />
-                      </div>
-                      {/* コンテンツ (z-indexで前面に出す) */}
-                      <div className="w-full h-full overflow-y-auto flex flex-col items-center justify-center scrollbar-hide relative z-10">
-                        <span className="text-xs font-bold text-blue-500 mb-4 tracking-widest">ANSWER</span>
-                        <div className="text-2xl font-black mb-6 leading-snug break-words max-w-full">{testQuestions[currentQuestionIndex].meaning}</div>
+                    <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-800 text-white flex flex-col items-center justify-center p-8 text-center rounded-3xl shadow-xl overflow-hidden">
+                      <div className="w-full h-full overflow-y-auto flex flex-col items-center justify-center scrollbar-hide">
+                        <span className="text-xs font-bold text-gray-400 mb-4 tracking-widest">ANSWER</span>
+                        <div className="text-2xl font-bold mb-6 leading-snug break-words max-w-full">{testQuestions[currentQuestionIndex].meaning}</div>
                         {testQuestions[currentQuestionIndex].example && (
-                          <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 w-full text-left shadow-sm">
-                            <p className="text-sm font-medium italic text-slate-700 mb-2">"{testQuestions[currentQuestionIndex].example}"</p>
-                            {testQuestions[currentQuestionIndex].exampleTranslation && <p className="text-xs text-slate-500 border-t border-blue-100 pt-2">{testQuestions[currentQuestionIndex].exampleTranslation}</p>}
+                          <div className="bg-slate-700/50 p-4 rounded-xl border border-slate-600 w-full text-left">
+                            <p className="text-sm font-medium italic text-gray-200 mb-2">"{testQuestions[currentQuestionIndex].example}"</p>
+                            {testQuestions[currentQuestionIndex].exampleTranslation && <p className="text-xs text-gray-400 border-t border-slate-600 pt-2">{testQuestions[currentQuestionIndex].exampleTranslation}</p>}
                           </div>
                         )}
                       </div>
                     </div>
-
                   </div>
                 </div>
-
               </div>
             ) : (
               <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 animate-fadeIn py-10">
@@ -359,7 +344,7 @@ export default function ClientPage({ words, posts }) {
         )}
       </div>
 
-      {/* --- 動画モーダル (単語帳用) --- */}
+      {/* --- 動画モーダル --- */}
       {videoModalItem && (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/80 backdrop-blur-sm p-4 animate-fadeIn" onClick={() => setVideoModalItem(null)}>
           <div className="relative w-full max-w-2xl bg-slate-800 rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
