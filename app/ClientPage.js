@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo, useRef, useEffect } from 'react';
 
-// --- アイコン ---
+// --- SVG アイコン定義 ---
 const SpeakerIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>);
 const PlayIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>);
 const ArrowUpIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>);
@@ -13,6 +13,9 @@ const DiamondBgIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 
 const HomeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>);
 const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
 const VideoIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>);
+// ★新規追加アイコン
+const CategoryIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>);
+const LevelIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
@@ -175,7 +178,6 @@ export default function ClientPage({ words, posts }) {
 
   const filteredWords = useMemo(() => {
     return safeWords.filter((item) => {
-      // 検索フィルタ
       const word = String(item.word || '');
       const meaning = String(item.meaning || '');
       const katakana = String(item.katakana || '');
@@ -183,7 +185,6 @@ export default function ClientPage({ words, posts }) {
       
       if (!matchSearch) return false;
       
-      // モードフィルタ
       if (filterMode === 'genre') {
         return selectedGenre === 'ALL' || item.genre === selectedGenre;
       } else if (filterMode === 'level') {
@@ -194,56 +195,60 @@ export default function ClientPage({ words, posts }) {
     });
   }, [searchQuery, filterMode, selectedGenre, selectedLevel, safeWords]);
 
-  // --- HOME コンポーネント ---
+  // --- HOME コンポーネント (オシャレな背景・中央配置・アイコン付き) ---
   const HomeView = () => (
-    <div className="p-5 flex flex-col gap-6 animate-fadeIn pb-24 pt-10 max-w-md mx-auto">
+    <div className="min-h-screen flex flex-col justify-center animate-fadeIn relative overflow-hidden bg-slate-50">
+      {/* ★オシャレな背景パターン（野球の縫い目を抽象化） */}
+      <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 C 45 0, 60 15, 60 30 C 60 45, 45 60, 30 60 C 15 60, 0 45, 0 30 C 0 15, 15 0, 30 0 Z M 30 5 C 16 5, 5 16, 5 30 C 5 44, 16 55, 30 55 C 44 55, 55 44, 55 30 C 55 16, 44 5, 30 5 Z' fill='none' stroke='%23334155' stroke-width='2'/%3E%3Cpath d='M 15 10 Q 25 20, 15 30 Q 5 40, 15 50' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-dasharray='4 6'/%3E%3Cpath d='M 45 10 Q 35 20, 45 30 Q 55 40, 45 50' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-dasharray='4 6'/%3E%3C/svg%3E")`, backgroundSize: '120px 120px' }}></div>
       
-      {/* タイトル */}
-      <div className="text-center mb-2">
-        <h1 className="text-5xl font-black text-slate-800 tracking-tighter mb-1">Basevo</h1>
-        <p className="text-xs font-bold text-blue-600 tracking-[0.3em] uppercase">- baseball vocabulary -</p>
-      </div>
+      <div className="p-6 flex flex-col gap-8 max-w-md mx-auto w-full z-10 pb-20">
+        {/* タイトル */}
+        <div className="text-center">
+          <h1 className="text-6xl font-black text-slate-800 tracking-tighter mb-2 drop-shadow-sm">Basevo</h1>
+          <p className="text-xs font-bold text-blue-600 tracking-[0.4em] uppercase">- baseball vocabulary -</p>
+        </div>
 
-      {/* ジャンル別 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <div className="mb-4">
-          <h2 className="text-lg font-bold text-slate-800">ジャンル別</h2>
-          <p className="text-xs text-gray-400">Categories</p>
+        {/* ジャンル */}
+        <div className="w-full">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <CategoryIcon />
+            <h2 className="text-xl font-bold text-slate-700 tracking-wider">ジャンル</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {GENRES.map(g => (
+              <button key={g} onClick={() => navigateToList('genre', g)} className="bg-white border-2 border-slate-200 py-4 rounded-2xl text-sm font-bold text-slate-600 shadow-sm active:scale-[0.97] hover:border-blue-400 hover:text-blue-600 hover:shadow-md transition-all">
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {GENRES.map(g => (
-            <button key={g} onClick={() => navigateToList('genre', g)} className="bg-white border border-gray-200 py-3 rounded-xl text-sm font-bold text-slate-600 shadow-sm active:scale-[0.98] hover:border-blue-500 hover:text-blue-600 transition-all">
-              {g}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* レベル別 (日本語説明削除) */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <div className="mb-4">
-          <h2 className="text-lg font-bold text-slate-800">レベル別</h2>
-          <p className="text-xs text-gray-400">Difficulty Levels</p>
+        {/* レベル */}
+        <div className="w-full">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <LevelIcon />
+            <h2 className="text-xl font-bold text-slate-700 tracking-wider">レベル</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {LEVELS.map((l) => (
+              <button key={l} onClick={() => navigateToList('level', l)} className="flex items-center justify-center bg-white border-2 border-slate-200 py-4 px-2 rounded-2xl shadow-sm active:scale-[0.97] hover:border-blue-400 group transition-all hover:shadow-md">
+                <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {LEVELS.map((l) => (
-            <button key={l} onClick={() => navigateToList('level', l)} className="flex items-center justify-center bg-white border border-gray-200 py-3 px-2 rounded-xl shadow-sm active:scale-[0.98] hover:border-blue-500 group transition-all">
-              <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* テストモード & コラム */}
-      <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-slate-800 to-slate-700 text-white rounded-xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-28">
-          <span className="font-bold text-xl mb-1">テストモード</span>
-          <span className="text-xs font-bold opacity-60 tracking-widest uppercase">Test</span>
-        </button>
-        <button onClick={() => setActiveTab('blog')} className="bg-white border border-gray-200 text-slate-800 rounded-xl p-5 shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center h-28 hover:border-blue-400">
-          <span className="font-bold text-xl mb-1">コラム</span>
-          <span className="text-xs font-bold text-gray-400 tracking-widest uppercase">Column</span>
-        </button>
+        {/* テストモード & コラム */}
+        <div className="grid grid-cols-2 gap-4 w-full mt-4">
+          <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-slate-800 to-slate-700 text-white rounded-2xl p-5 shadow-lg active:scale-95 transition-transform flex flex-col items-center justify-center h-32">
+            <span className="font-bold text-xl mb-1">テストモード</span>
+            <span className="text-xs font-bold opacity-60 tracking-widest uppercase">Test</span>
+          </button>
+          <button onClick={() => setActiveTab('blog')} className="bg-white border-2 border-slate-200 text-slate-800 rounded-2xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-32 hover:border-blue-400 hover:shadow-lg">
+            <span className="font-bold text-xl mb-1">コラム</span>
+            <span className="text-xs font-bold text-gray-400 tracking-widest uppercase">Column</span>
+          </button>
+        </div>
       </div>
     </div>
   );
