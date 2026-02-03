@@ -50,9 +50,8 @@ export default function ClientPage({ words, posts }) {
   const safeWords = (words && Array.isArray(words)) ? words : [];
   const safePosts = (posts && Array.isArray(posts)) ? posts : [];
 
-  // --- State ---
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'list' | 'test' | 'blog'
-  const [filterMode, setFilterMode] = useState('genre'); // 'genre' | 'level'
+  const [activeTab, setActiveTab] = useState('home');
+  const [filterMode, setFilterMode] = useState('genre');
   
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [selectedLevel, setSelectedLevel] = useState('Level 1');
@@ -62,10 +61,6 @@ export default function ClientPage({ words, posts }) {
   const [videoModalItem, setVideoModalItem] = useState(null);
   const [blogModalPost, setBlogModalPost] = useState(null);
 
-  // アコーディオンメニュー用
-  const [homeMenuOpen, setHomeMenuOpen] = useState({ genre: false, level: false });
-
-  // テストモード用
   const [testPhase, setTestPhase] = useState('select');
   const [testQuestions, setTestQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -80,7 +75,6 @@ export default function ClientPage({ words, posts }) {
   const GENRES = ["ALL", "打撃・走塁", "投球・守備", "成績・契約", "実況", "SNS"];
   const LEVELS = ["Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
 
-  // スクロール制御
   useEffect(() => {
     if (blogModalPost || videoModalItem) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
@@ -103,7 +97,6 @@ export default function ClientPage({ words, posts }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [activeTab]);
 
-  // --- ヘルパー関数 ---
   const toggleHeader = () => setIsHeaderVisible(!isHeaderVisible);
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   const scrollToBottom = () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
@@ -134,23 +127,18 @@ export default function ClientPage({ words, posts }) {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  // --- ナビゲーション操作 ---
   const navigateToList = (type, value) => {
     setFilterMode(type);
     if (type === 'genre') setSelectedGenre(value);
     if (type === 'level') setSelectedLevel(value);
     setActiveTab('list');
-    setHomeMenuOpen({ genre: false, level: false }); // メニューを閉じる
     window.scrollTo({ top: 0 });
   };
 
-  // --- テスト機能 ---
   const startTest = (targetGenre) => {
-    // フィルターロジック: 現在のモード(Level/Genre)に関係なく、テスト開始時の指定に従う
-    // 今回はシンプルにジャンル指定のみ実装していますが、必要ならLevel指定も可能です
     let candidates = targetGenre === 'ALL' ? safeWords : safeWords.filter(w => w.genre === targetGenre);
     const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10);
-    if (selected.length === 0) return alert("単語がありません");
+    if (selected.length === 0) return alert("このジャンルの単語がありません");
     setTestQuestions(selected);
     setCurrentQuestionIndex(0);
     setIsFlipped(false);
@@ -165,95 +153,72 @@ export default function ClientPage({ words, posts }) {
   };
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
 
-  // --- フィルタリングロジック (最重要) ---
   const filteredWords = useMemo(() => {
     return safeWords.filter((item) => {
-      // 検索ワード
       const matchSearch = (item.word + item.meaning + item.katakana).toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchSearch) return false;
-
-      // モードによるフィルタリング
       if (filterMode === 'genre') {
         return selectedGenre === 'ALL' || item.genre === selectedGenre;
       } else if (filterMode === 'level') {
-        // Notionの難易度カラムが "Level 1" などになっている前提
         return item.difficulty === selectedLevel;
       }
       return true;
     });
   }, [searchQuery, filterMode, selectedGenre, selectedLevel, safeWords]);
 
-  // --- HOME コンポーネント ---
+  // --- HOME コンポーネント (アコーディオン廃止・ワンクリック化) ---
   const HomeView = () => (
-    <div className="p-5 flex flex-col gap-4 animate-fadeIn pb-24 pt-10">
-      <div className="text-center mb-6">
-        <h1 className="text-3xl font-black text-slate-800 tracking-tight">BASEBALL<br/><span className="text-blue-600">ENGLISH</span></h1>
-        <p className="text-xs text-gray-400 mt-2 font-bold tracking-widest">LEARN REAL BASEBALL TERMS</p>
+    <div className="p-5 flex flex-col gap-5 animate-fadeIn pb-24 pt-10">
+      
+      {/* タイトル */}
+      <div className="text-center mb-4">
+        <h1 className="text-4xl font-black text-slate-800 tracking-tight mb-1">Basevo</h1>
+        <p className="text-sm font-bold text-blue-600 tracking-widest uppercase">- baseball vocabulary -</p>
       </div>
 
-      {/* ジャンル別ボタン (アコーディオン) */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <button 
-          onClick={() => setHomeMenuOpen(prev => ({...prev, genre: !prev.genre}))}
-          className="w-full p-5 flex justify-between items-center bg-white active:bg-gray-50 transition-colors"
-        >
-          <div className="text-left">
-            <span className="block text-lg font-bold text-slate-800">ジャンル別</span>
-            <span className="text-xs text-gray-400">Categories</span>
-          </div>
-          <div className={`transform transition-transform duration-300 ${homeMenuOpen.genre ? 'rotate-180' : ''}`}><ChevronDownIcon /></div>
-        </button>
-        <div className={`transition-all duration-300 ease-in-out bg-slate-50 ${homeMenuOpen.genre ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="p-4 grid grid-cols-2 gap-3">
-            {GENRES.map(g => (
-              <button key={g} onClick={() => navigateToList('genre', g)} className="bg-white border border-gray-200 py-3 rounded-xl text-sm font-bold text-slate-600 shadow-sm active:scale-95 hover:border-blue-400 hover:text-blue-600 transition-all">
-                {g}
-              </button>
-            ))}
-          </div>
+      {/* ジャンル別 (常に展開) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+        <div className="mb-3 text-left">
+          <span className="block text-lg font-bold text-slate-800">ジャンル別</span>
+          <span className="text-xs text-gray-400">Categories</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {GENRES.map(g => (
+            <button key={g} onClick={() => navigateToList('genre', g)} className="bg-white border border-gray-200 py-3 rounded-xl text-sm font-bold text-slate-600 shadow-sm active:scale-[0.98] hover:border-blue-400 hover:text-blue-600 transition-all">
+              {g}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* レベル別ボタン (アコーディオン) */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <button 
-          onClick={() => setHomeMenuOpen(prev => ({...prev, level: !prev.level}))}
-          className="w-full p-5 flex justify-between items-center bg-white active:bg-gray-50 transition-colors"
-        >
-          <div className="text-left">
-            <span className="block text-lg font-bold text-slate-800">レベル別</span>
-            <span className="text-xs text-gray-400">Difficulty Levels</span>
-          </div>
-          <div className={`transform transition-transform duration-300 ${homeMenuOpen.level ? 'rotate-180' : ''}`}><ChevronDownIcon /></div>
-        </button>
-        <div className={`transition-all duration-300 ease-in-out bg-slate-50 ${homeMenuOpen.level ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="p-4 grid grid-cols-1 gap-2">
-            {LEVELS.map((l, idx) => (
-              <button key={l} onClick={() => navigateToList('level', l)} className="flex items-center justify-between bg-white border border-gray-200 p-3 rounded-xl shadow-sm active:scale-[0.98] hover:border-blue-400 group transition-all">
-                <div className="flex flex-col text-left">
-                  <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
-                  <span className="text-[10px] text-gray-400">
-                    {idx === 0 ? "基本用語" : idx === 1 ? "頻出単語" : idx === 2 ? "頻出 Part2" : idx === 3 ? "応用" : "マニアック"}
-                  </span>
-                </div>
-                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-blue-100 group-hover:text-blue-600">→</div>
-              </button>
-            ))}
-          </div>
+      {/* レベル別 (常に展開・2列表示) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+        <div className="mb-3 text-left">
+          <span className="block text-lg font-bold text-slate-800">レベル別</span>
+          <span className="text-xs text-gray-400">Difficulty Levels</span>
+        </div>
+        {/* ★2列グリッドに変更 */}
+        <div className="grid grid-cols-2 gap-3">
+          {LEVELS.map((l, idx) => (
+            <button key={l} onClick={() => navigateToList('level', l)} className="flex flex-col items-center justify-center bg-white border border-gray-200 py-3 px-2 rounded-xl shadow-sm active:scale-[0.98] hover:border-blue-400 group transition-all">
+              <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
+              <span className="text-[10px] text-gray-400 mt-1">
+                {idx === 0 ? "基本用語" : idx === 1 ? "頻出単語" : idx === 2 ? "頻出単語 Part2" : idx === 3 ? "応用" : "マニアック"}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* テストモード & コラム */}
+      {/* テストモード & コラム (アイコン削除・文字デザイン変更) */}
       <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-2xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-32">
-          <span className="text-2xl mb-2">📝</span>
-          <span className="font-bold text-lg">TEST</span>
-          <span className="text-[10px] opacity-80">テストモード</span>
+        <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-2xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-28">
+          <span className="font-black text-xl mb-1">テストモード</span>
+          <span className="text-xs font-bold opacity-80 tracking-widest">TEST</span>
         </button>
-        <button onClick={() => setActiveTab('blog')} className="bg-white border border-gray-200 text-slate-800 rounded-2xl p-5 shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center h-32">
-          <span className="text-2xl mb-2">📰</span>
-          <span className="font-bold text-lg">COLUMN</span>
-          <span className="text-[10px] text-gray-400">コラム・記事</span>
+        <button onClick={() => setActiveTab('blog')} className="bg-white border border-gray-200 text-slate-800 rounded-2xl p-5 shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center h-28">
+          <span className="font-black text-xl mb-1">コラム</span>
+          <span className="text-xs font-bold text-gray-400 tracking-widest">COLUMN</span>
         </button>
       </div>
     </div>
@@ -272,7 +237,7 @@ export default function ClientPage({ words, posts }) {
           <div className="text-sm font-bold text-slate-700">
             {filterMode === 'genre' ? 'ジャンル別' : 'レベル別'}リスト
           </div>
-          <div className="w-16"></div> {/* スペーサー */}
+          <div className="w-16"></div>
         </div>
         
         <div className={`overflow-hidden transition-all duration-500 ease-in-out bg-white ${(activeTab === 'list') ? 'max-h-[340px] opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -281,7 +246,6 @@ export default function ClientPage({ words, posts }) {
               <input type="text" placeholder="リスト内検索..." className="w-full rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5 text-base focus:bg-white focus:border-blue-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
             
-            {/* モードによって表示するボタンを切り替え */}
             <div className="flex flex-wrap justify-center px-3 gap-2">
               {filterMode === 'genre' 
                 ? GENRES.map((genre) => (
@@ -339,7 +303,6 @@ export default function ClientPage({ words, posts }) {
                       </div>
                       <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
                         <span style={IPA_FONT_STYLE}>{item.ipa}</span>
-                        {/* レベル表示 */}
                         <span className={`px-1.5 py-0.5 rounded text-[10px] border ${item.difficulty.includes('1') ? 'bg-green-50 text-green-600 border-green-100' : item.difficulty.includes('5') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                           {item.difficulty}
                         </span>
@@ -372,7 +335,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* === テストモード (HOMEに戻る機能つき) === */}
+        {/* === テストモード (ボタン上配置＆正方形カード) === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
@@ -389,7 +352,9 @@ export default function ClientPage({ words, posts }) {
                    <div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
                 </div>
                 <div className="mb-6 w-full">
-                  <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">{currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}</button>
+                  <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">
+                    {currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}
+                  </button>
                 </div>
                 <div className="relative w-full aspect-square perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
                   <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
