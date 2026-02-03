@@ -16,12 +16,10 @@ const VideoIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" heig
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
-// --- 安全な表示用コンポーネント (エラー防止版) ---
+// --- 安全な表示用コンポーネント ---
 function DetailRow({ label, content }) {
   if (!content) return null;
-  // contentがオブジェクトの場合は文字列に変換して表示（クラッシュ防止）
   const safeContent = (typeof content === 'object') ? JSON.stringify(content) : String(content);
-  
   return (
     <div>
       <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
@@ -196,19 +194,7 @@ export default function ClientPage({ words, posts }) {
     });
   }, [searchQuery, filterMode, selectedGenre, selectedLevel, safeWords]);
 
-  const getLevelDescription = (level) => {
-    switch (level) {
-      case 'ALL': return "すべての単語";
-      case 'Level 1': return "基本用語";
-      case 'Level 2': return "頻出単語";
-      case 'Level 3': return "頻出単語 Part2";
-      case 'Level 4': return "応用";
-      case 'Level 5': return "マニアック";
-      default: return "";
-    }
-  };
-
-  // --- HOME コンポーネント (シンプル & プロフェッショナル) ---
+  // --- HOME コンポーネント ---
   const HomeView = () => (
     <div className="p-5 flex flex-col gap-6 animate-fadeIn pb-24 pt-10 max-w-md mx-auto">
       
@@ -233,7 +219,7 @@ export default function ClientPage({ words, posts }) {
         </div>
       </div>
 
-      {/* レベル別 */}
+      {/* レベル別 (日本語説明削除) */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <div className="mb-4">
           <h2 className="text-lg font-bold text-slate-800">レベル別</h2>
@@ -241,9 +227,8 @@ export default function ClientPage({ words, posts }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           {LEVELS.map((l) => (
-            <button key={l} onClick={() => navigateToList('level', l)} className="flex flex-col items-center justify-center bg-white border border-gray-200 py-3 px-2 rounded-xl shadow-sm active:scale-[0.98] hover:border-blue-500 group transition-all">
+            <button key={l} onClick={() => navigateToList('level', l)} className="flex items-center justify-center bg-white border border-gray-200 py-3 px-2 rounded-xl shadow-sm active:scale-[0.98] hover:border-blue-500 group transition-all">
               <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
-              <span className="text-[10px] text-gray-400 mt-0.5">{getLevelDescription(l)}</span>
             </button>
           ))}
         </div>
@@ -377,7 +362,6 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* ... テストモード、ブログ、スクロールボタン、styleはそのまま ... */}
         {/* === テストモード (ジャンル・レベル両方から選択可能) === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
@@ -400,14 +384,13 @@ export default function ClientPage({ words, posts }) {
                   </div>
                 </div>
 
-                {/* レベルから選択 */}
+                {/* レベルから選択 (日本語説明削除) */}
                 <div className="w-full max-w-sm">
                   <h3 className="text-sm font-bold text-slate-500 mb-3 text-center tracking-widest">レベルから選択</h3>
                   <div className="grid grid-cols-2 gap-3">
                     {LEVELS.map(l => (
                       <button key={l} onClick={() => startTest('level', l)} className="p-3 flex flex-col items-center bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:bg-blue-50 active:scale-95 transition-all">
                         <span className="font-bold text-slate-700">{l}</span>
-                        <span className="text-[10px] text-gray-400 mt-0.5">{getLevelDescription(l)}</span>
                       </button>
                     ))}
                   </div>
