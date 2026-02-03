@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo, useRef, useEffect } from 'react';
 
-// --- SVG アイコン定義 ---
+// --- アイコン ---
 const SpeakerIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>);
 const PlayIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>);
 const ArrowUpIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>);
@@ -16,7 +16,7 @@ const VideoIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" heig
 const CategoryIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>);
 const LevelIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>);
 // ★文字サイズ変更アイコン
-const TextSizeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>);
+const TextSizeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
@@ -110,7 +110,7 @@ export default function ClientPage({ words, posts }) {
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [selectedLevel, setSelectedLevel] = useState('Level 1');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLargeText, setIsLargeText] = useState(false); // ★文字サイズ管理
+  const [isLargeText, setIsLargeText] = useState(false); // 文字サイズ管理
   
   const [expandedId, setExpandedId] = useState(null);
   const [videoModalItem, setVideoModalItem] = useState(null);
@@ -216,10 +216,7 @@ export default function ClientPage({ words, posts }) {
 
   const filteredWords = useMemo(() => {
     return safeWords.filter((item) => {
-      const word = String(item.word || '');
-      const meaning = String(item.meaning || '');
-      const katakana = String(item.katakana || '');
-      const matchSearch = (word + meaning + katakana).toLowerCase().includes(searchQuery.toLowerCase());
+      const matchSearch = (item.word + item.meaning + item.katakana).toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchSearch) return false;
       if (filterMode === 'genre') {
         return selectedGenre === 'ALL' || item.genre === selectedGenre;
@@ -236,23 +233,14 @@ export default function ClientPage({ words, posts }) {
     <div className="min-h-screen flex flex-col justify-center animate-fadeIn relative overflow-hidden bg-slate-50">
       <div className="absolute inset-0 z-0 opacity-[0.04] blur-[1px] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 C 45 0, 60 15, 60 30 C 60 45, 45 60, 30 60 C 15 60, 0 45, 0 30 C 0 15, 15 0, 30 0 Z M 30 5 C 16 5, 5 16, 5 30 C 5 44, 16 55, 30 55 C 44 55, 55 44, 55 30 C 55 16, 44 5, 30 5 Z' fill='none' stroke='%23334155' stroke-width='2'/%3E%3Cpath d='M 15 10 Q 25 20, 15 30 Q 5 40, 15 50' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-dasharray='4 6'/%3E%3Cpath d='M 45 10 Q 35 20, 45 30 Q 55 40, 45 50' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-dasharray='4 6'/%3E%3C/svg%3E")`, backgroundSize: '120px 120px' }}></div>
       
-      {/* ★文字サイズ変更ボタン (右上) */}
-      <div className="absolute top-4 right-4 z-50">
-        <button 
-          onClick={() => setIsLargeText(!isLargeText)} 
-          className={`flex items-center gap-2 px-3 py-2 rounded-full border transition-all ${isLargeText ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-gray-300 shadow-sm'}`}
-        >
-          <TextSizeIcon />
-          <span className="text-xs font-bold">{isLargeText ? '文字: 大' : '文字: 標準'}</span>
-        </button>
-      </div>
-
-      <div className="p-6 flex flex-col gap-8 max-w-md mx-auto w-full z-10 pb-20">
+      <div className="p-6 flex flex-col gap-8 max-w-md mx-auto w-full z-10 pb-24">
+        {/* タイトル */}
         <div className="text-center">
           <h1 className="text-6xl font-black text-slate-800 tracking-tighter mb-2 drop-shadow-sm">Basevo</h1>
           <p className="text-xs font-bold text-blue-600 tracking-[0.4em] uppercase">- baseball vocabulary -</p>
         </div>
 
+        {/* ジャンル */}
         <div className="w-full border-2 border-slate-200 rounded-3xl p-5 bg-white/60 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-center gap-2 mb-4">
             <CategoryIcon />
@@ -267,6 +255,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         </div>
 
+        {/* レベル */}
         <div className="w-full border-2 border-slate-200 rounded-3xl p-5 bg-white/60 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-center gap-2 mb-4">
             <LevelIcon />
@@ -281,6 +270,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         </div>
 
+        {/* テストモード & コラム */}
         <div className="grid grid-cols-2 gap-4 w-full mt-2">
           <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-slate-800 to-slate-700 text-white rounded-2xl p-5 shadow-lg active:scale-95 transition-transform flex flex-col items-center justify-center h-32 border-2 border-transparent">
             <span className="font-bold text-xl mb-1">テストモード</span>
@@ -289,6 +279,17 @@ export default function ClientPage({ words, posts }) {
           <button onClick={() => setActiveTab('blog')} className="bg-white border-2 border-slate-200 text-slate-800 rounded-2xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-32 hover:border-blue-400 hover:shadow-lg">
             <span className="font-bold text-xl mb-1">コラム</span>
             <span className="text-xs font-bold text-gray-400 tracking-widest uppercase">Column</span>
+          </button>
+        </div>
+
+        {/* ★文字サイズ変更ボタン（一番下に配置） */}
+        <div className="flex justify-center mt-4">
+          <button 
+            onClick={() => setIsLargeText(!isLargeText)} 
+            className={`flex items-center gap-2 px-6 py-3 rounded-full border-2 transition-all ${isLargeText ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-500 border-slate-200 shadow-sm hover:border-slate-400'}`}
+          >
+            <TextSizeIcon />
+            <span className="text-sm font-bold tracking-wide">{isLargeText ? '文字サイズ: 大' : '文字サイズ: 標準'}</span>
           </button>
         </div>
       </div>
@@ -558,18 +559,18 @@ export default function ClientPage({ words, posts }) {
         .aspect-video { aspect-ratio: 16 / 9; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         
-        /* ★文字サイズ拡大モードのCSS上書き★ */
-        .large-text-mode {
-          font-size: 110%; /* 全体のベースサイズを上げる */
-        }
-        .large-text-mode .text-xs { font-size: 0.875rem !important; line-height: 1.25rem !important; }
-        .large-text-mode .text-sm { font-size: 1rem !important; line-height: 1.5rem !important; }
-        .large-text-mode .text-base { font-size: 1.125rem !important; line-height: 1.75rem !important; }
-        .large-text-mode .text-lg { font-size: 1.25rem !important; line-height: 1.75rem !important; }
-        .large-text-mode .text-xl { font-size: 1.5rem !important; line-height: 2rem !important; }
-        .large-text-mode .text-2xl { font-size: 1.875rem !important; line-height: 2.25rem !important; }
-        .large-text-mode .text-3xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
-        .large-text-mode h1, .large-text-mode h2, .large-text-mode h3 { letter-spacing: 0.02em; }
+        /* ★特大文字モード（全体1.25倍 + 個別調整） */
+        .large-text-mode { font-size: 125%; }
+        .large-text-mode .text-[10px] { font-size: 0.85rem !important; line-height: 1.2rem !important; }
+        .large-text-mode .text-xs { font-size: 1rem !important; line-height: 1.5rem !important; }
+        .large-text-mode .text-sm { font-size: 1.125rem !important; line-height: 1.75rem !important; }
+        .large-text-mode .text-base { font-size: 1.25rem !important; line-height: 1.8rem !important; }
+        .large-text-mode .text-lg { font-size: 1.5rem !important; line-height: 2rem !important; }
+        .large-text-mode .text-xl { font-size: 1.75rem !important; line-height: 2.25rem !important; }
+        .large-text-mode .text-2xl { font-size: 2rem !important; line-height: 2.5rem !important; }
+        .large-text-mode .text-3xl { font-size: 2.5rem !important; line-height: 1.2 !important; }
+        /* レイアウト崩れ防止 */
+        .large-text-mode button { min-height: 48px; } 
       `}</style>
     </div>
   );
