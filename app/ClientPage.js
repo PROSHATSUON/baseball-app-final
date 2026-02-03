@@ -73,7 +73,6 @@ export default function ClientPage({ words, posts }) {
   const lastScrollTopRef = useRef(0);
   
   const GENRES = ["ALL", "打撃・走塁", "投球・守備", "成績・契約", "実況", "SNS"];
-  // ★ALLを追加
   const LEVELS = ["ALL", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
 
   useEffect(() => {
@@ -136,22 +135,15 @@ export default function ClientPage({ words, posts }) {
     window.scrollTo({ top: 0 });
   };
 
-  // ★テスト機能の改修：ジャンルまたはレベルで開始可能に
   const startTest = (type, value) => {
     let candidates = safeWords;
-    
-    // フィルタリング
     if (type === 'genre') {
       if (value !== 'ALL') candidates = safeWords.filter(w => w.genre === value);
     } else if (type === 'level') {
       if (value !== 'ALL') candidates = safeWords.filter(w => w.difficulty === value);
     }
-
-    // ランダム選択
     const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10);
-    
     if (selected.length === 0) return alert("該当する単語がありません");
-    
     setTestQuestions(selected);
     setCurrentQuestionIndex(0);
     setIsFlipped(false);
@@ -171,37 +163,61 @@ export default function ClientPage({ words, posts }) {
     return safeWords.filter((item) => {
       const matchSearch = (item.word + item.meaning + item.katakana).toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchSearch) return false;
-      
       if (filterMode === 'genre') {
         return selectedGenre === 'ALL' || item.genre === selectedGenre;
       } else if (filterMode === 'level') {
-        // Notionの難易度カラムと一致するか、ALLなら全部
         return selectedLevel === 'ALL' || item.difficulty === selectedLevel;
       }
       return true;
     });
   }, [searchQuery, filterMode, selectedGenre, selectedLevel, safeWords]);
 
-  // レベルの説明文を返す関数
   const getLevelDescription = (level) => {
     switch (level) {
       case 'ALL': return "すべての単語";
       case 'Level 1': return "基本用語";
       case 'Level 2': return "頻出単語";
-      case 'Level 3': return "頻出単語 Part2"; // ★修正
+      case 'Level 3': return "頻出単語 Part2";
       case 'Level 4': return "応用";
       case 'Level 5': return "マニアック";
       default: return "";
     }
   };
 
-  // --- HOME コンポーネント ---
+  // --- HOME コンポーネント (豪華な表紙デザイン) ---
   const HomeView = () => (
-    <div className="p-5 flex flex-col gap-5 animate-fadeIn pb-24 pt-10">
+    <div className="p-5 flex flex-col gap-5 animate-fadeIn pb-24 pt-0"> {/* pt-10 -> pt-0 に変更 */}
       
-      <div className="text-center mb-4">
-        <h1 className="text-4xl font-black text-slate-800 tracking-tight mb-1">Basevo</h1>
-        <p className="text-sm font-bold text-blue-600 tracking-widest uppercase">- baseball vocabulary -</p>
+      {/* ★豪華になった表紙エリア★ */}
+      <div className="relative overflow-hidden rounded-3xl shadow-xl mb-2 bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white">
+        {/* 背景装飾（ダイヤモンドパターンと光） */}
+        <div className="absolute inset-0 opacity-10">
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="diamond-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M20 0 L40 20 L20 40 L0 20 Z" fill="none" stroke="currentColor" strokeWidth="1"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#diamond-pattern)" />
+          </svg>
+        </div>
+        <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle,rgba(255,255,255,0.3)_0%,rgba(0,0,0,0)_60%)] pointer-events-none"></div>
+
+        {/* タイトルコンテンツ */}
+        <div className="relative z-10 p-10 text-center flex flex-col items-center justify-center h-64">
+          <h1 className="text-6xl font-black tracking-tighter mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-100 via-white to-blue-200 drop-shadow-sm">
+            Basevo
+          </h1>
+          <p className="text-sm font-bold tracking-[0.3em] uppercase text-blue-200 relative before:content-[''] before:absolute before:top-1/2 before:right-full before:w-8 before:h-[1px] before:bg-blue-400/50 before:mr-4 after:content-[''] after:absolute after:top-1/2 after:left-full after:w-8 after:h-[1px] after:bg-blue-400/50 after:ml-4">
+            baseball vocabulary
+          </p>
+          <p className="mt-6 text-blue-100/80 text-xs font-medium max-w-xs leading-relaxed">
+            メジャーリーグを100倍楽しむための<br/>実践的な野球英語をマスターしよう
+          </p>
+          <div className="mt-6 animate-bounce">
+            <ChevronDownIcon className="text-blue-300/70" />
+          </div>
+        </div>
       </div>
 
       {/* ジャンル別 (常に展開) */}
