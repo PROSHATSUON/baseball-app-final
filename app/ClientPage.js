@@ -19,51 +19,63 @@ const TextSizeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" h
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
-// --- リッチテキスト対応ヘルパー（太文字・色・リンク・改行対応） ---
+// --- ★太文字・改行対応ヘルパー（色ロジック削除版） ---
 const RichText = ({ textObj }) => {
   if (!textObj) return null;
-  // 安全にデータを取り出す
-  const annotations = textObj.annotations || {};
-  const plain_text = textObj.plain_text || "";
-  const href = textObj.href || null;
+  // 万が一文字列が直接渡された場合
+  if (typeof textObj === 'string') return <span className="whitespace-pre-wrap">{textObj}</span>;
 
-  // スタイルのマッピング
-  const styleClass = [
-    annotations.bold ? "font-bold" : "",
-    annotations.italic ? "italic" : "",
-    annotations.strikethrough ? "line-through" : "",
-    annotations.underline ? "underline" : "",
-    annotations.code ? "bg-gray-100 rounded px-1 font-mono text-red-500" : "",
-  ].join(" ");
+  // plain_text または content を取得
+  const plain_text = textObj.plain_text || textObj.text?.content || "";
+  if (!plain_text) return null;
 
-  // 色のマッピング
-  const colorMap = {
-    "blue": "text-blue-600", "blue_background": "bg-blue-100",
-    "brown": "text-amber-700", "brown_background": "bg-amber-100",
-    "gray": "text-gray-500", "gray_background": "bg-gray-200",
-    "green": "text-green-600", "green_background": "bg-green-100",
-    "orange": "text-orange-600", "orange_background": "bg-orange-100",
-    "pink": "text-pink-600", "pink_background": "bg-pink-100",
-    "purple": "text-purple-600", "purple_background": "bg-purple-100",
-    "red": "text-red-600", "red_background": "bg-red-100",
-    "yellow": "text-yellow-600", "yellow_background": "bg-yellow-100",
-  };
-  const colorClass = (annotations.color && annotations.color !== 'default') ? (colorMap[annotations.color] || "") : "";
+  // 太文字判定 (annotationsがない場合も考慮)
+  const isBold = textObj.annotations?.bold;
+  const href = textObj.href || textObj.text?.link?.url;
 
-  // 改行を反映させるために whitespace-pre-wrap を付与
-  const content = <span className={`${styleClass} ${colorClass} whitespace-pre-wrap`}>{plain_text}</span>;
+  const content = <span className={`${isBold ? "font-bold" : ""} whitespace-pre-wrap`}>{plain_text}</span>;
 
   return href ? <a href={href} target="_blank" rel="noreferrer" className="underline text-blue-500 hover:text-blue-700">{content}</a> : content;
 };
 
-// --- ブロックレンダラー (コラム用) ---
+// --- ★安全な詳細表示コンポーネント ---
+function DetailRow({ label, content }) {
+  if (!content) return null;
+
+  // 配列（リッチテキスト）の場合
+  if (Array.isArray(content)) {
+    return (
+      <div>
+        <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
+        <span className="text-gray-700 leading-relaxed block">
+          {content.map((t, i) => <RichText key={i} textObj={t} />)}
+        </span>
+      </div>
+    );
+  }
+
+  // オブジェクトだが配列ではない場合（念のため文字列化して表示）
+  if (typeof content === 'object') {
+    return null; // 表示できない形式として無視する
+  }
+
+  // 通常の文字列・数値の場合
+  return (
+    <div>
+      <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
+      <span className="text-gray-700 whitespace-pre-wrap leading-relaxed block">{String(content)}</span>
+    </div>
+  );
+}
+
+// --- ブロックレンダラー ---
 const RenderBlock = ({ block }) => {
   const { type } = block;
   const value = block[type];
   if (type === 'divider') return <hr className="my-6 border-gray-200" />;
   if (!value) return null;
 
-  // rich_textを全て安全にレンダリングする関数
+  // コラム用リッチテキスト処理
   const renderRichText = () => {
     if (value.rich_text && Array.isArray(value.rich_text)) {
       return value.rich_text.map((t, i) => <RichText key={i} textObj={t} />);
@@ -94,32 +106,6 @@ const RenderBlock = ({ block }) => {
     default: return null;
   }
 };
-
-// --- 単語詳細用の安全な表示コンポーネント ---
-function DetailRow({ label, content }) {
-  if (!content) return null;
-  
-  // もしcontentが配列（リッチテキスト）だったら、それをレンダリング
-  if (Array.isArray(content)) {
-    return (
-      <div>
-        <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
-        <span className="text-gray-700 whitespace-pre-wrap leading-relaxed block">
-          {content.map((t, i) => <RichText key={i} textObj={t} />)}
-        </span>
-      </div>
-    );
-  }
-
-  // 文字列の場合
-  const safeContent = (typeof content === 'object') ? JSON.stringify(content) : String(content);
-  return (
-    <div>
-      <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
-      <span className="text-gray-700 whitespace-pre-wrap leading-relaxed block">{safeContent}</span>
-    </div>
-  );
-}
 
 export default function ClientPage({ words, posts }) {
   const safeWords = (words && Array.isArray(words)) ? words : [];
@@ -320,7 +306,7 @@ export default function ClientPage({ words, posts }) {
     <div className={`min-h-screen font-sans text-gray-800 bg-[#f8f9fa] ${isLargeText ? 'large-text-mode' : ''}`}>
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
-      {/* ヘッダー (Listタブのみ表示) */}
+      {/* ヘッダー */}
       <div className={`fixed top-0 left-0 w-full z-30 bg-white shadow-sm transition-transform duration-500 ease-in-out border-b border-gray-200 ${(activeTab === 'list' && !isHeaderVisible) ? '-translate-y-full' : 'translate-y-0'} ${activeTab !== 'list' ? 'hidden' : ''}`}>
         <div className="px-4 pt-3 pb-2 bg-white relative z-20 flex items-center justify-between">
           <button onClick={() => setActiveTab('home')} className="flex items-center gap-1 text-gray-400 hover:text-blue-600 transition-colors font-bold text-xs px-2 py-1 bg-gray-50 rounded-lg">
@@ -331,7 +317,6 @@ export default function ClientPage({ words, posts }) {
           </div>
           <div className="w-16"></div>
         </div>
-        
         <div className={`overflow-hidden transition-all duration-500 ease-in-out bg-white ${(activeTab === 'list') ? 'max-h-[340px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="pb-8">
             <div className="px-3 pb-3">
@@ -340,7 +325,6 @@ export default function ClientPage({ words, posts }) {
                 <input type="text" placeholder="リスト内検索..." className="w-full rounded-lg bg-gray-100 border border-gray-200 pl-10 pr-4 py-2.5 text-base focus:bg-white focus:border-blue-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
             </div>
-            
             <div className="flex flex-wrap justify-center px-3 gap-2">
               {filterMode === 'genre' 
                 ? GENRES.map((genre) => (
@@ -351,7 +335,6 @@ export default function ClientPage({ words, posts }) {
                   ))
               }
             </div>
-            
             <div className="px-4 py-1 text-right text-[10px] text-gray-400">{filteredWords.length} Words Found</div>
           </div>
           <div onClick={toggleHeader} className="absolute bottom-0 left-0 w-full flex justify-center pb-1 cursor-pointer bg-gradient-to-t from-white to-transparent z-10">
@@ -380,11 +363,9 @@ export default function ClientPage({ words, posts }) {
 
       {/* メインエリア */}
       <div className="transition-all duration-500 ease-in-out" style={{ paddingTop: activeTab === 'home' ? '0px' : (activeTab === 'list' ? (isHeaderVisible ? '260px' : '60px') : '80px') }}>
-        
-        {/* === HOME画面 === */}
         {activeTab === 'home' && <HomeView />}
-
-        {/* === 単語リスト === */}
+        
+        {/* 単語リスト */}
         {activeTab === 'list' && (
           <div className="p-3 space-y-3 pb-24">
             {filteredWords.length === 0 ? <div className="text-center py-20 text-gray-400">見つかりませんでした</div> : 
@@ -430,7 +411,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* === テストモード === */}
+        {/* テストモード */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
@@ -442,17 +423,13 @@ export default function ClientPage({ words, posts }) {
                 <div className="w-full max-w-sm border-2 border-slate-200 rounded-3xl p-5 bg-white shadow-sm">
                   <h3 className="text-sm font-bold text-slate-500 mb-3 text-center tracking-widest">ジャンルから選択</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    {GENRES.map(g => (
-                      <button key={g} onClick={() => startTest('genre', g)} className="p-3 bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:border-blue-500 hover:bg-blue-50 font-bold text-slate-700 active:scale-95 transition-all text-sm">{g}</button>
-                    ))}
+                    {GENRES.map(g => (<button key={g} onClick={() => startTest('genre', g)} className="p-3 bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:border-blue-500 hover:bg-blue-50 font-bold text-slate-700 active:scale-95 transition-all text-sm">{g}</button>))}
                   </div>
                 </div>
                 <div className="w-full max-w-sm border-2 border-slate-200 rounded-3xl p-5 bg-white shadow-sm">
                   <h3 className="text-sm font-bold text-slate-500 mb-3 text-center tracking-widest">レベルから選択</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    {LEVELS.map(l => (
-                      <button key={l} onClick={() => startTest('level', l)} className="p-3 flex flex-col items-center bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:border-blue-500 hover:bg-blue-50 active:scale-95 transition-all"><span className="font-bold text-slate-700">{l}</span></button>
-                    ))}
+                    {LEVELS.map(l => (<button key={l} onClick={() => startTest('level', l)} className="p-3 flex flex-col items-center bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:border-blue-500 hover:bg-blue-50 active:scale-95 transition-all"><span className="font-bold text-slate-700">{l}</span></button>))}
                   </div>
                 </div>
               </div>
@@ -502,7 +479,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* === コラム（ブログ）タブ === */}
+        {/* コラム */}
         {activeTab === 'blog' && (
           <div className="p-3 space-y-3 pb-24">
             {safePosts.length === 0 ? <div className="text-center py-20 text-gray-400">No Columns</div> : 
@@ -526,7 +503,7 @@ export default function ClientPage({ words, posts }) {
         )}
       </div>
 
-      {/* --- 動画モーダル --- */}
+      {/* 動画モーダル */}
       {videoModalItem && (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/80 backdrop-blur-sm p-4 animate-fadeIn" onClick={() => setVideoModalItem(null)}>
           <div className="relative w-full max-w-2xl bg-slate-800 rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -539,7 +516,7 @@ export default function ClientPage({ words, posts }) {
         </div>
       )}
 
-      {/* --- コラム記事モーダル --- */}
+      {/* コラム記事モーダル */}
       {blogModalPost && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6 bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={() => setBlogModalPost(null)}>
           <div className="bg-white w-full max-w-2xl h-[90vh] sm:h-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
@@ -579,7 +556,7 @@ export default function ClientPage({ words, posts }) {
         .aspect-video { aspect-ratio: 16 / 9; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         
-        /* ★特大文字モード（全体1.25倍 + 個別調整） */
+        /* ★特大文字モード設定（全体1.25倍 + 個別調整） */
         .large-text-mode { font-size: 125%; }
         .large-text-mode .text-[10px] { font-size: 0.85rem !important; line-height: 1.2rem !important; }
         .large-text-mode .text-xs { font-size: 1rem !important; line-height: 1.5rem !important; }
