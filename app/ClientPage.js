@@ -12,10 +12,25 @@ const ExternalLinkIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="1
 const DiamondBgIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor" className="w-full h-full opacity-[0.06] text-blue-500 pointer-events-none"><polygon points="50,5 95,50 50,95 5,50" /></svg>);
 const HomeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>);
 const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
+const VideoIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
-// --- シンプル版 ブロックレンダラー ---
+// --- 安全な表示用コンポーネント (エラー防止版) ---
+function DetailRow({ label, content }) {
+  if (!content) return null;
+  // contentがオブジェクトの場合は文字列に変換して表示（クラッシュ防止）
+  const safeContent = (typeof content === 'object') ? JSON.stringify(content) : String(content);
+  
+  return (
+    <div>
+      <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
+      <span className="text-gray-700">{safeContent}</span>
+    </div>
+  );
+}
+
+// --- ブロックレンダラー ---
 const RenderBlock = ({ block }) => {
   const { type } = block;
   const value = block[type];
@@ -162,12 +177,20 @@ export default function ClientPage({ words, posts }) {
 
   const filteredWords = useMemo(() => {
     return safeWords.filter((item) => {
-      const matchSearch = (item.word + item.meaning + item.katakana).toLowerCase().includes(searchQuery.toLowerCase());
+      // 検索フィルタ
+      const word = String(item.word || '');
+      const meaning = String(item.meaning || '');
+      const katakana = String(item.katakana || '');
+      const matchSearch = (word + meaning + katakana).toLowerCase().includes(searchQuery.toLowerCase());
+      
       if (!matchSearch) return false;
+      
+      // モードフィルタ
       if (filterMode === 'genre') {
         return selectedGenre === 'ALL' || item.genre === selectedGenre;
       } else if (filterMode === 'level') {
-        return selectedLevel === 'ALL' || item.difficulty === selectedLevel;
+        const diff = String(item.difficulty || '');
+        return selectedLevel === 'ALL' || diff === selectedLevel;
       }
       return true;
     });
@@ -189,7 +212,7 @@ export default function ClientPage({ words, posts }) {
   const HomeView = () => (
     <div className="p-5 flex flex-col gap-6 animate-fadeIn pb-24 pt-10 max-w-md mx-auto">
       
-      {/* タイトル (検索窓削除) */}
+      {/* タイトル */}
       <div className="text-center mb-2">
         <h1 className="text-5xl font-black text-slate-800 tracking-tighter mb-1">Basevo</h1>
         <p className="text-xs font-bold text-blue-600 tracking-[0.3em] uppercase">- baseball vocabulary -</p>
@@ -322,7 +345,7 @@ export default function ClientPage({ words, posts }) {
                       </div>
                       <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
                         <span style={IPA_FONT_STYLE}>{item.ipa}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] border ${item.difficulty.includes('1') ? 'bg-green-50 text-green-600 border-green-100' : item.difficulty.includes('5') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] border ${String(item.difficulty || '').includes('1') ? 'bg-green-50 text-green-600 border-green-100' : String(item.difficulty || '').includes('5') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                           {item.difficulty}
                         </span>
                       </div>
@@ -354,6 +377,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
+        {/* ... テストモード、ブログ、スクロールボタン、styleはそのまま ... */}
         {/* === テストモード (ジャンル・レベル両方から選択可能) === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
@@ -514,9 +538,4 @@ export default function ClientPage({ words, posts }) {
       `}</style>
     </div>
   );
-}
-
-function DetailRow({ label, content }) {
-  if (!content) return null;
-  return <div><span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span><span className="text-gray-700">{content}</span></div>;
 }
