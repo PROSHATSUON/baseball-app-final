@@ -73,7 +73,8 @@ export default function ClientPage({ words, posts }) {
   const lastScrollTopRef = useRef(0);
   
   const GENRES = ["ALL", "打撃・走塁", "投球・守備", "成績・契約", "実況", "SNS"];
-  const LEVELS = ["Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
+  // ★ALLを追加
+  const LEVELS = ["ALL", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
 
   useEffect(() => {
     if (blogModalPost || videoModalItem) document.body.style.overflow = 'hidden';
@@ -135,15 +136,28 @@ export default function ClientPage({ words, posts }) {
     window.scrollTo({ top: 0 });
   };
 
-  const startTest = (targetGenre) => {
-    let candidates = targetGenre === 'ALL' ? safeWords : safeWords.filter(w => w.genre === targetGenre);
+  // ★テスト機能の改修：ジャンルまたはレベルで開始可能に
+  const startTest = (type, value) => {
+    let candidates = safeWords;
+    
+    // フィルタリング
+    if (type === 'genre') {
+      if (value !== 'ALL') candidates = safeWords.filter(w => w.genre === value);
+    } else if (type === 'level') {
+      if (value !== 'ALL') candidates = safeWords.filter(w => w.difficulty === value);
+    }
+
+    // ランダム選択
     const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10);
-    if (selected.length === 0) return alert("このジャンルの単語がありません");
+    
+    if (selected.length === 0) return alert("該当する単語がありません");
+    
     setTestQuestions(selected);
     setCurrentQuestionIndex(0);
     setIsFlipped(false);
     setTestPhase('playing');
   };
+
   const nextCard = (e) => {
     e.stopPropagation();
     if (currentQuestionIndex < testQuestions.length - 1) {
@@ -157,20 +171,34 @@ export default function ClientPage({ words, posts }) {
     return safeWords.filter((item) => {
       const matchSearch = (item.word + item.meaning + item.katakana).toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchSearch) return false;
+      
       if (filterMode === 'genre') {
         return selectedGenre === 'ALL' || item.genre === selectedGenre;
       } else if (filterMode === 'level') {
-        return item.difficulty === selectedLevel;
+        // Notionの難易度カラムと一致するか、ALLなら全部
+        return selectedLevel === 'ALL' || item.difficulty === selectedLevel;
       }
       return true;
     });
   }, [searchQuery, filterMode, selectedGenre, selectedLevel, safeWords]);
 
-  // --- HOME コンポーネント (アコーディオン廃止・ワンクリック化) ---
+  // レベルの説明文を返す関数
+  const getLevelDescription = (level) => {
+    switch (level) {
+      case 'ALL': return "すべての単語";
+      case 'Level 1': return "基本用語";
+      case 'Level 2': return "頻出単語";
+      case 'Level 3': return "頻出単語 Part2"; // ★修正
+      case 'Level 4': return "応用";
+      case 'Level 5': return "マニアック";
+      default: return "";
+    }
+  };
+
+  // --- HOME コンポーネント ---
   const HomeView = () => (
     <div className="p-5 flex flex-col gap-5 animate-fadeIn pb-24 pt-10">
       
-      {/* タイトル */}
       <div className="text-center mb-4">
         <h1 className="text-4xl font-black text-slate-800 tracking-tight mb-1">Basevo</h1>
         <p className="text-sm font-bold text-blue-600 tracking-widest uppercase">- baseball vocabulary -</p>
@@ -191,34 +219,31 @@ export default function ClientPage({ words, posts }) {
         </div>
       </div>
 
-      {/* レベル別 (常に展開・2列表示) */}
+      {/* レベル別 (常に展開・2列表示・ALL追加) */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
         <div className="mb-3 text-left">
           <span className="block text-lg font-bold text-slate-800">レベル別</span>
           <span className="text-xs text-gray-400">Difficulty Levels</span>
         </div>
-        {/* ★2列グリッドに変更 */}
         <div className="grid grid-cols-2 gap-3">
-          {LEVELS.map((l, idx) => (
+          {LEVELS.map((l) => (
             <button key={l} onClick={() => navigateToList('level', l)} className="flex flex-col items-center justify-center bg-white border border-gray-200 py-3 px-2 rounded-xl shadow-sm active:scale-[0.98] hover:border-blue-400 group transition-all">
               <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
-              <span className="text-[10px] text-gray-400 mt-1">
-                {idx === 0 ? "基本用語" : idx === 1 ? "頻出単語" : idx === 2 ? "頻出単語 Part2" : idx === 3 ? "応用" : "マニアック"}
-              </span>
+              <span className="text-[10px] text-gray-400 mt-1">{getLevelDescription(l)}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* テストモード & コラム (アイコン削除・文字デザイン変更) */}
+      {/* テストモード & コラム (アイコンなし・大文字小文字修正) */}
       <div className="grid grid-cols-2 gap-4">
         <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-2xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-28">
           <span className="font-black text-xl mb-1">テストモード</span>
-          <span className="text-xs font-bold opacity-80 tracking-widest">TEST</span>
+          <span className="text-xs font-bold opacity-80 tracking-widest">Test</span>
         </button>
         <button onClick={() => setActiveTab('blog')} className="bg-white border border-gray-200 text-slate-800 rounded-2xl p-5 shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center h-28">
           <span className="font-black text-xl mb-1">コラム</span>
-          <span className="text-xs font-bold text-gray-400 tracking-widest">COLUMN</span>
+          <span className="text-xs font-bold text-gray-400 tracking-widest">Column</span>
         </button>
       </div>
     </div>
@@ -335,14 +360,39 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* === テストモード (ボタン上配置＆正方形カード) === */}
+        {/* === テストモード (ジャンル・レベル両方から選択可能) === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
-              <div className="flex-1 flex flex-col justify-center items-center space-y-6 animate-fadeIn py-10">
-                <h2 className="text-2xl font-black text-slate-800 text-center"><span className="text-blue-600 block text-lg mb-1">TEST MODE</span>ジャンルを選択</h2>
-                <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-                  {GENRES.map(g => <button key={g} onClick={() => startTest(g)} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:bg-blue-50 font-bold text-slate-700 active:scale-95">{g}</button>)}
+              <div className="flex-1 flex flex-col justify-start items-center space-y-8 animate-fadeIn py-6 overflow-y-auto pb-20">
+                <div className="text-center mb-2">
+                  <h2 className="text-2xl font-black text-slate-800">TEST MODE</h2>
+                  <p className="text-xs text-gray-400 font-bold">Select mode to start</p>
+                </div>
+
+                {/* ジャンルから選択 */}
+                <div className="w-full max-w-sm">
+                  <h3 className="text-sm font-bold text-slate-500 mb-3 text-center tracking-widest">ジャンルから選択</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {GENRES.map(g => (
+                      <button key={g} onClick={() => startTest('genre', g)} className="p-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:bg-blue-50 font-bold text-slate-700 active:scale-95 transition-all text-sm">
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* レベルから選択 */}
+                <div className="w-full max-w-sm">
+                  <h3 className="text-sm font-bold text-slate-500 mb-3 text-center tracking-widest">レベルから選択</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {LEVELS.map(l => (
+                      <button key={l} onClick={() => startTest('level', l)} className="p-3 flex flex-col items-center bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:bg-blue-50 active:scale-95 transition-all">
+                        <span className="font-bold text-slate-700">{l}</span>
+                        <span className="text-[10px] text-gray-400 mt-0.5">{getLevelDescription(l)}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : testPhase === 'playing' ? (
@@ -352,9 +402,7 @@ export default function ClientPage({ words, posts }) {
                    <div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
                 </div>
                 <div className="mb-6 w-full">
-                  <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">
-                    {currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}
-                  </button>
+                  <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">{currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}</button>
                 </div>
                 <div className="relative w-full aspect-square perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
                   <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
