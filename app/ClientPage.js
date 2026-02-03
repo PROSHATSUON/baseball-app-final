@@ -9,6 +9,8 @@ const ArrowDownIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" 
 const ChevronDownIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>);
 const ChevronUpIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>);
 const ExternalLinkIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>);
+const DiamondBgIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor" className="w-full h-full opacity-[0.06] text-blue-500 pointer-events-none"><polygon points="50,5 95,50 50,95 5,50" /></svg>);
+const HomeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
@@ -16,10 +18,8 @@ const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS",
 const RenderBlock = ({ block }) => {
   const { type } = block;
   const value = block[type];
-  
   if (type === 'divider') return <hr className="my-6 border-gray-200" />;
   if (!value) return null;
-  
   const text = value.rich_text ? value.rich_text.map(t => t.plain_text).join('') : '';
   const caption = value.caption ? value.caption.map(t => t.plain_text).join('') : '';
   const url = value.url || value.external?.url || value.file?.url || "";
@@ -32,37 +32,16 @@ const RenderBlock = ({ block }) => {
     case 'bulleted_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-disc pl-1">{text}</li>;
     case 'numbered_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-decimal pl-1">{text}</li>;
     case 'quote': return <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-500 my-4 bg-gray-50 py-3 pr-2 text-sm rounded-r">{text}</blockquote>;
-    
     case 'image': 
-      return (
-        <figure className="my-6">
-          <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100">
-            <img src={url} alt="Article Image" className="w-full h-auto" />
-          </div>
-          {caption && <figcaption className="text-center text-xs text-gray-400 mt-2">{caption}</figcaption>}
-        </figure>
-      );
-
+      return (<figure className="my-6"><div className="rounded-xl overflow-hidden shadow-sm border border-gray-100"><img src={url} alt="Article Image" className="w-full h-auto" /></div>{caption && <figcaption className="text-center text-xs text-gray-400 mt-2">{caption}</figcaption>}</figure>);
     case 'audio':
-      return (
-        <div className="my-6">
-           <audio controls src={url} className="w-full h-10 focus:outline-none" />
-           {caption && <p className="text-xs text-slate-500 text-center mt-1">{caption}</p>}
-        </div>
-      );
-
+      return (<div className="my-6"><audio controls src={url} className="w-full h-10 focus:outline-none" />{caption && <p className="text-xs text-slate-500 text-center mt-1">{caption}</p>}</div>);
     case 'file':
       const cleanUrl = url?.split('?')[0].toLowerCase() || "";
-      const audioExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg'];
-      if (audioExtensions.some(ext => cleanUrl.endsWith(ext))) {
-        return (
-          <div className="my-6">
-            <audio controls src={url} className="w-full h-10 focus:outline-none" />
-          </div>
-        );
+      if (['.mp3', '.wav', '.m4a', '.aac', '.ogg'].some(ext => cleanUrl.endsWith(ext))) {
+        return (<div className="my-6"><audio controls src={url} className="w-full h-10 focus:outline-none" /></div>);
       }
       return null;
-
     default: return null;
   }
 };
@@ -71,13 +50,22 @@ export default function ClientPage({ words, posts }) {
   const safeWords = (words && Array.isArray(words)) ? words : [];
   const safePosts = (posts && Array.isArray(posts)) ? posts : [];
 
-  const [activeTab, setActiveTab] = useState('list');
-  const [searchQuery, setSearchQuery] = useState('');
+  // --- State ---
+  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'list' | 'test' | 'blog'
+  const [filterMode, setFilterMode] = useState('genre'); // 'genre' | 'level'
+  
   const [selectedGenre, setSelectedGenre] = useState('ALL');
+  const [selectedLevel, setSelectedLevel] = useState('Level 1');
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const [expandedId, setExpandedId] = useState(null);
   const [videoModalItem, setVideoModalItem] = useState(null);
   const [blogModalPost, setBlogModalPost] = useState(null);
 
+  // アコーディオンメニュー用
+  const [homeMenuOpen, setHomeMenuOpen] = useState({ genre: false, level: false });
+
+  // テストモード用
   const [testPhase, setTestPhase] = useState('select');
   const [testQuestions, setTestQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -90,13 +78,12 @@ export default function ClientPage({ words, posts }) {
   const lastScrollTopRef = useRef(0);
   
   const GENRES = ["ALL", "打撃・走塁", "投球・守備", "成績・契約", "実況", "SNS"];
+  const LEVELS = ["Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
 
+  // スクロール制御
   useEffect(() => {
-    if (blogModalPost || videoModalItem) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (blogModalPost || videoModalItem) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
   }, [blogModalPost, videoModalItem]);
 
@@ -116,6 +103,7 @@ export default function ClientPage({ words, posts }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [activeTab]);
 
+  // --- ヘルパー関数 ---
   const toggleHeader = () => setIsHeaderVisible(!isHeaderVisible);
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   const scrollToBottom = () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
@@ -146,16 +134,28 @@ export default function ClientPage({ words, posts }) {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  const startTest = (genre) => {
-    let candidates = genre === 'ALL' ? safeWords : safeWords.filter(w => w.genre === genre);
+  // --- ナビゲーション操作 ---
+  const navigateToList = (type, value) => {
+    setFilterMode(type);
+    if (type === 'genre') setSelectedGenre(value);
+    if (type === 'level') setSelectedLevel(value);
+    setActiveTab('list');
+    setHomeMenuOpen({ genre: false, level: false }); // メニューを閉じる
+    window.scrollTo({ top: 0 });
+  };
+
+  // --- テスト機能 ---
+  const startTest = (targetGenre) => {
+    // フィルターロジック: 現在のモード(Level/Genre)に関係なく、テスト開始時の指定に従う
+    // 今回はシンプルにジャンル指定のみ実装していますが、必要ならLevel指定も可能です
+    let candidates = targetGenre === 'ALL' ? safeWords : safeWords.filter(w => w.genre === targetGenre);
     const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10);
-    if (selected.length === 0) return alert("このジャンルの単語がありません");
+    if (selected.length === 0) return alert("単語がありません");
     setTestQuestions(selected);
     setCurrentQuestionIndex(0);
     setIsFlipped(false);
     setTestPhase('playing');
   };
-
   const nextCard = (e) => {
     e.stopPropagation();
     if (currentQuestionIndex < testQuestions.length - 1) {
@@ -163,45 +163,134 @@ export default function ClientPage({ words, posts }) {
       setTimeout(() => setCurrentQuestionIndex(prev => prev + 1), 150);
     } else setTestPhase('result');
   };
-
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
 
+  // --- フィルタリングロジック (最重要) ---
   const filteredWords = useMemo(() => {
     return safeWords.filter((item) => {
-      const matchGenre = selectedGenre === 'ALL' || item.genre === selectedGenre;
+      // 検索ワード
       const matchSearch = (item.word + item.meaning + item.katakana).toLowerCase().includes(searchQuery.toLowerCase());
-      return matchGenre && matchSearch;
+      if (!matchSearch) return false;
+
+      // モードによるフィルタリング
+      if (filterMode === 'genre') {
+        return selectedGenre === 'ALL' || item.genre === selectedGenre;
+      } else if (filterMode === 'level') {
+        // Notionの難易度カラムが "Level 1" などになっている前提
+        return item.difficulty === selectedLevel;
+      }
+      return true;
     });
-  }, [searchQuery, selectedGenre, safeWords]);
+  }, [searchQuery, filterMode, selectedGenre, selectedLevel, safeWords]);
+
+  // --- HOME コンポーネント ---
+  const HomeView = () => (
+    <div className="p-5 flex flex-col gap-4 animate-fadeIn pb-24 pt-10">
+      <div className="text-center mb-6">
+        <h1 className="text-3xl font-black text-slate-800 tracking-tight">BASEBALL<br/><span className="text-blue-600">ENGLISH</span></h1>
+        <p className="text-xs text-gray-400 mt-2 font-bold tracking-widest">LEARN REAL BASEBALL TERMS</p>
+      </div>
+
+      {/* ジャンル別ボタン (アコーディオン) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <button 
+          onClick={() => setHomeMenuOpen(prev => ({...prev, genre: !prev.genre}))}
+          className="w-full p-5 flex justify-between items-center bg-white active:bg-gray-50 transition-colors"
+        >
+          <div className="text-left">
+            <span className="block text-lg font-bold text-slate-800">ジャンル別</span>
+            <span className="text-xs text-gray-400">Categories</span>
+          </div>
+          <div className={`transform transition-transform duration-300 ${homeMenuOpen.genre ? 'rotate-180' : ''}`}><ChevronDownIcon /></div>
+        </button>
+        <div className={`transition-all duration-300 ease-in-out bg-slate-50 ${homeMenuOpen.genre ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="p-4 grid grid-cols-2 gap-3">
+            {GENRES.map(g => (
+              <button key={g} onClick={() => navigateToList('genre', g)} className="bg-white border border-gray-200 py-3 rounded-xl text-sm font-bold text-slate-600 shadow-sm active:scale-95 hover:border-blue-400 hover:text-blue-600 transition-all">
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* レベル別ボタン (アコーディオン) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <button 
+          onClick={() => setHomeMenuOpen(prev => ({...prev, level: !prev.level}))}
+          className="w-full p-5 flex justify-between items-center bg-white active:bg-gray-50 transition-colors"
+        >
+          <div className="text-left">
+            <span className="block text-lg font-bold text-slate-800">レベル別</span>
+            <span className="text-xs text-gray-400">Difficulty Levels</span>
+          </div>
+          <div className={`transform transition-transform duration-300 ${homeMenuOpen.level ? 'rotate-180' : ''}`}><ChevronDownIcon /></div>
+        </button>
+        <div className={`transition-all duration-300 ease-in-out bg-slate-50 ${homeMenuOpen.level ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="p-4 grid grid-cols-1 gap-2">
+            {LEVELS.map((l, idx) => (
+              <button key={l} onClick={() => navigateToList('level', l)} className="flex items-center justify-between bg-white border border-gray-200 p-3 rounded-xl shadow-sm active:scale-[0.98] hover:border-blue-400 group transition-all">
+                <div className="flex flex-col text-left">
+                  <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
+                  <span className="text-[10px] text-gray-400">
+                    {idx === 0 ? "基本用語" : idx === 1 ? "頻出単語" : idx === 2 ? "頻出 Part2" : idx === 3 ? "応用" : "マニアック"}
+                  </span>
+                </div>
+                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-blue-100 group-hover:text-blue-600">→</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* テストモード & コラム */}
+      <div className="grid grid-cols-2 gap-4">
+        <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-2xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-32">
+          <span className="text-2xl mb-2">📝</span>
+          <span className="font-bold text-lg">TEST</span>
+          <span className="text-[10px] opacity-80">テストモード</span>
+        </button>
+        <button onClick={() => setActiveTab('blog')} className="bg-white border border-gray-200 text-slate-800 rounded-2xl p-5 shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center h-32">
+          <span className="text-2xl mb-2">📰</span>
+          <span className="font-bold text-lg">COLUMN</span>
+          <span className="text-[10px] text-gray-400">コラム・記事</span>
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen font-sans text-gray-800 bg-[#f8f9fa]">
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
-      {/* ヘッダー */}
-      {/* 2行になってもいいように少しパディングを広げました (260px) */}
-      <div className={`fixed top-0 left-0 w-full z-30 bg-white shadow-sm transition-transform duration-500 ease-in-out border-b border-gray-200 ${(activeTab === 'list' && !isHeaderVisible) ? '-translate-y-full' : 'translate-y-0'}`}>
-        <div className="px-4 pt-3 pb-2 bg-white relative z-20">
-          <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
-            {['list', 'test', 'blog'].map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === tab ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-                {tab === 'list' ? '単語リスト' : tab === 'test' ? 'テストモード' : 'コラム'}
-              </button>
-            ))}
+      {/* ヘッダー (Listタブのみ表示) */}
+      <div className={`fixed top-0 left-0 w-full z-30 bg-white shadow-sm transition-transform duration-500 ease-in-out border-b border-gray-200 ${(activeTab === 'list' && !isHeaderVisible) ? '-translate-y-full' : 'translate-y-0'} ${activeTab !== 'list' ? 'hidden' : ''}`}>
+        <div className="px-4 pt-3 pb-2 bg-white relative z-20 flex items-center justify-between">
+          <button onClick={() => setActiveTab('home')} className="flex items-center gap-1 text-gray-400 hover:text-blue-600 transition-colors font-bold text-xs px-2 py-1 bg-gray-50 rounded-lg">
+            <HomeIcon /> <span>HOME</span>
+          </button>
+          <div className="text-sm font-bold text-slate-700">
+            {filterMode === 'genre' ? 'ジャンル別' : 'レベル別'}リスト
           </div>
+          <div className="w-16"></div> {/* スペーサー */}
         </div>
         
         <div className={`overflow-hidden transition-all duration-500 ease-in-out bg-white ${(activeTab === 'list') ? 'max-h-[340px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="pb-8">
             <div className="px-3 pb-3">
-              <input type="text" placeholder="単語・意味・カタカナ検索" className="w-full rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5 text-base focus:bg-white focus:border-blue-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <input type="text" placeholder="リスト内検索..." className="w-full rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5 text-base focus:bg-white focus:border-blue-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
             
-            {/* ★ここを変更！横スクロール(overflow-x-auto)をやめて、折り返し(flex-wrap)にしました */}
+            {/* モードによって表示するボタンを切り替え */}
             <div className="flex flex-wrap justify-center px-3 gap-2">
-              {GENRES.map((genre) => (
-                <button key={genre} onClick={() => setSelectedGenre(genre)} className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-colors mb-1 ${selectedGenre === genre ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{genre}</button>
-              ))}
+              {filterMode === 'genre' 
+                ? GENRES.map((genre) => (
+                    <button key={genre} onClick={() => setSelectedGenre(genre)} className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-colors mb-1 ${selectedGenre === genre ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{genre}</button>
+                  ))
+                : LEVELS.map((level) => (
+                    <button key={level} onClick={() => setSelectedLevel(level)} className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-colors mb-1 ${selectedLevel === level ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{level}</button>
+                  ))
+              }
             </div>
             
             <div className="px-4 py-1 text-right text-[10px] text-gray-400">{filteredWords.length} Words Found</div>
@@ -212,14 +301,30 @@ export default function ClientPage({ words, posts }) {
         </div>
       </div>
 
-      {/* MENUボタン */}
-      <div className={`fixed top-0 left-0 w-full z-40 flex justify-center pointer-events-none transition-transform duration-500 ${(activeTab === 'list' && !isHeaderVisible) ? 'translate-y-0' : '-translate-y-full'}`}>
-        <button onClick={toggleHeader} className="mt-[-2px] bg-white/90 backdrop-blur-sm border border-gray-200 border-t-0 rounded-b-xl px-6 py-1 shadow-md text-blue-600 pointer-events-auto flex flex-col items-center"><ChevronDownIcon /><span className="text-[9px] font-bold mt-0.5">MENU</span></button>
-      </div>
+      {/* MENUボタン (Listの時だけ表示) */}
+      {activeTab === 'list' && (
+        <div className={`fixed top-0 left-0 w-full z-40 flex justify-center pointer-events-none transition-transform duration-500 ${(activeTab === 'list' && !isHeaderVisible) ? 'translate-y-0' : '-translate-y-full'}`}>
+          <button onClick={toggleHeader} className="mt-[-2px] bg-white/90 backdrop-blur-sm border border-gray-200 border-t-0 rounded-b-xl px-6 py-1 shadow-md text-blue-600 pointer-events-auto flex flex-col items-center"><ChevronDownIcon /><span className="text-[9px] font-bold mt-0.5">MENU</span></button>
+        </div>
+      )}
 
-      {/* メインエリア (パディングを少し増やして調整 240px -> 260px) */}
-      <div className="transition-all duration-500 ease-in-out" style={{ paddingTop: activeTab === 'list' ? (isHeaderVisible ? '260px' : '60px') : '80px' }}>
+      {/* HOMEに戻るボタン (Test/Columnの時だけ表示) */}
+      {(activeTab === 'test' || activeTab === 'blog') && (
+        <div className="fixed top-0 left-0 w-full z-30 bg-white/90 backdrop-blur-sm shadow-sm border-b border-gray-200 px-4 py-3 flex justify-between items-center">
+           <button onClick={() => setActiveTab('home')} className="flex items-center gap-1 text-gray-500 hover:text-blue-600 font-bold text-xs px-3 py-1.5 bg-gray-100 rounded-lg">
+             <HomeIcon /> <span>HOME</span>
+           </button>
+           <span className="font-bold text-slate-700">{activeTab === 'test' ? 'TEST MODE' : 'COLUMN'}</span>
+           <div className="w-16"></div>
+        </div>
+      )}
+
+      {/* メインエリア */}
+      <div className="transition-all duration-500 ease-in-out" style={{ paddingTop: activeTab === 'home' ? '0px' : (activeTab === 'list' ? (isHeaderVisible ? '260px' : '60px') : '80px') }}>
         
+        {/* === HOME画面 === */}
+        {activeTab === 'home' && <HomeView />}
+
         {/* === 単語リスト === */}
         {activeTab === 'list' && (
           <div className="p-3 space-y-3 pb-24">
@@ -232,7 +337,13 @@ export default function ClientPage({ words, posts }) {
                         <h3 className="text-lg font-extrabold text-slate-800 leading-tight">{item.word}</h3>
                         {item.audioUrl && <button onClick={(e) => playAudio(e, item.audioUrl)} className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 active:scale-95"><SpeakerIcon /></button>}
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-gray-400 font-mono"><span style={IPA_FONT_STYLE}>{item.ipa}</span><span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{item.difficulty}</span></div>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
+                        <span style={IPA_FONT_STYLE}>{item.ipa}</span>
+                        {/* レベル表示 */}
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] border ${item.difficulty.includes('1') ? 'bg-green-50 text-green-600 border-green-100' : item.difficulty.includes('5') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                          {item.difficulty}
+                        </span>
+                      </div>
                     </div>
                     <div className="text-sm font-bold text-gray-600 text-right max-w-[40%] leading-snug">{item.meaning}</div>
                   </div>
@@ -261,7 +372,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* === テストモード === */}
+        {/* === テストモード (HOMEに戻る機能つき) === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
@@ -277,13 +388,9 @@ export default function ClientPage({ words, posts }) {
                    <div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span>Question {currentQuestionIndex + 1}</span><span>{testQuestions.length}</span></div>
                    <div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
                 </div>
-
                 <div className="mb-6 w-full">
-                  <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">
-                    {currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}
-                  </button>
+                  <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">{currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}</button>
                 </div>
-
                 <div className="relative w-full aspect-square perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
                   <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                     <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100">
@@ -292,14 +399,15 @@ export default function ClientPage({ words, posts }) {
                       <div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
                       {testQuestions[currentQuestionIndex].audioUrl && <button onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)} className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm border border-blue-100 active:scale-90"><SpeakerIcon /></button>}
                     </div>
-                    <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-800 text-white flex flex-col items-center justify-center p-8 text-center rounded-3xl shadow-xl overflow-hidden">
-                      <div className="w-full h-full overflow-y-auto flex flex-col items-center justify-center scrollbar-hide">
-                        <span className="text-xs font-bold text-gray-400 mb-4 tracking-widest">ANSWER</span>
-                        <div className="text-2xl font-bold mb-6 leading-snug break-words max-w-full">{testQuestions[currentQuestionIndex].meaning}</div>
+                    <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white text-slate-800 flex flex-col items-center justify-center p-8 text-center rounded-3xl shadow-xl border-2 border-slate-100 overflow-hidden relative">
+                      <div className="absolute inset-0 flex items-center justify-center p-12 z-0"><DiamondBgIcon /></div>
+                      <div className="w-full h-full overflow-y-auto flex flex-col items-center justify-center scrollbar-hide relative z-10">
+                        <span className="text-xs font-bold text-blue-500 mb-4 tracking-widest">ANSWER</span>
+                        <div className="text-2xl font-black mb-6 leading-snug break-words max-w-full">{testQuestions[currentQuestionIndex].meaning}</div>
                         {testQuestions[currentQuestionIndex].example && (
-                          <div className="bg-slate-700/50 p-4 rounded-xl border border-slate-600 w-full text-left">
-                            <p className="text-sm font-medium italic text-gray-200 mb-2">"{testQuestions[currentQuestionIndex].example}"</p>
-                            {testQuestions[currentQuestionIndex].exampleTranslation && <p className="text-xs text-gray-400 border-t border-slate-600 pt-2">{testQuestions[currentQuestionIndex].exampleTranslation}</p>}
+                          <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 w-full text-left shadow-sm">
+                            <p className="text-sm font-medium italic text-slate-700 mb-2">"{testQuestions[currentQuestionIndex].example}"</p>
+                            {testQuestions[currentQuestionIndex].exampleTranslation && <p className="text-xs text-slate-500 border-t border-blue-100 pt-2">{testQuestions[currentQuestionIndex].exampleTranslation}</p>}
                           </div>
                         )}
                       </div>
@@ -313,7 +421,7 @@ export default function ClientPage({ words, posts }) {
                 <h2 className="text-3xl font-black text-slate-800">Test Completed!</h2>
                 <div className="flex flex-col w-full max-w-xs gap-3">
                   <button onClick={restartTest} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95">もう一度テストする</button>
-                  <button onClick={() => setActiveTab('list')} className="text-gray-400 font-bold text-sm py-2">単語リストに戻る</button>
+                  <button onClick={() => setActiveTab('home')} className="text-gray-400 font-bold text-sm py-2">HOMEに戻る</button>
                 </div>
               </div>
             )}
