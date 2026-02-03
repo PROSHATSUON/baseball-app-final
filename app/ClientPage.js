@@ -11,6 +11,7 @@ const ChevronUpIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" 
 const ExternalLinkIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>);
 const DiamondBgIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor" className="w-full h-full opacity-[0.06] text-blue-500 pointer-events-none"><polygon points="50,5 95,50 50,95 5,50" /></svg>);
 const HomeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>);
+const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
@@ -135,6 +136,15 @@ export default function ClientPage({ words, posts }) {
     window.scrollTo({ top: 0 });
   };
 
+  // ★検索実行時の処理（ホーム画面用）
+  const handleSearchSubmit = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim() !== '') {
+      // 検索キーワードがある状態でEnterが押されたら、リスト画面に遷移
+      setActiveTab('list');
+      window.scrollTo({ top: 0 });
+    }
+  };
+
   const startTest = (type, value) => {
     let candidates = safeWords;
     if (type === 'genre') {
@@ -184,83 +194,84 @@ export default function ClientPage({ words, posts }) {
     }
   };
 
-  // --- HOME コンポーネント (豪華な表紙デザイン) ---
+  // --- HOME コンポーネント (新デザイン & 検索窓追加) ---
   const HomeView = () => (
-    <div className="p-5 flex flex-col gap-5 animate-fadeIn pb-24 pt-0"> {/* pt-10 -> pt-0 に変更 */}
-      
-      {/* ★豪華になった表紙エリア★ */}
-      <div className="relative overflow-hidden rounded-3xl shadow-xl mb-2 bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white">
-        {/* 背景装飾（ダイヤモンドパターンと光） */}
-        <div className="absolute inset-0 opacity-10">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="diamond-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M20 0 L40 20 L20 40 L0 20 Z" fill="none" stroke="currentColor" strokeWidth="1"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#diamond-pattern)" />
-          </svg>
-        </div>
-        <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle,rgba(255,255,255,0.3)_0%,rgba(0,0,0,0)_60%)] pointer-events-none"></div>
+    <div className="relative overflow-hidden animate-fadeIn min-h-screen bg-[#f8f9fa]">
+      {/* 背景のアクセント（抽象的なフィールド） */}
+      <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-blue-50 to-transparent -z-10"></div>
+      <div className="absolute -top-24 -right-24 w-64 h-64 bg-green-50 rounded-full blur-3xl opacity-60 -z-10"></div>
+      <div className="absolute top-32 -left-32 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-60 -z-10"></div>
 
-        {/* タイトルコンテンツ */}
-        <div className="relative z-10 p-10 text-center flex flex-col items-center justify-center h-64">
-          <h1 className="text-6xl font-black tracking-tighter mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-100 via-white to-blue-200 drop-shadow-sm">
+      <div className="p-5 pb-32 flex flex-col gap-6 max-w-md mx-auto">
+        {/* タイトルヘッダー */}
+        <div className="pt-8 pb-4 text-center">
+          <h1 className="text-5xl font-black tracking-tighter text-slate-800 mb-1">
             Basevo
           </h1>
-          <p className="text-sm font-bold tracking-[0.3em] uppercase text-blue-200 relative before:content-[''] before:absolute before:top-1/2 before:right-full before:w-8 before:h-[1px] before:bg-blue-400/50 before:mr-4 after:content-[''] after:absolute after:top-1/2 after:left-full after:w-8 after:h-[1px] after:bg-blue-400/50 after:ml-4">
-            baseball vocabulary
+          <p className="text-sm font-bold text-blue-600 tracking-[0.2em] uppercase">
+            - baseball vocabulary -
           </p>
-          <p className="mt-6 text-blue-100/80 text-xs font-medium max-w-xs leading-relaxed">
-            メジャーリーグを100倍楽しむための<br/>実践的な野球英語をマスターしよう
-          </p>
-          <div className="mt-6 animate-bounce">
-            <ChevronDownIcon className="text-blue-300/70" />
+        </div>
+
+        {/* ★ホーム画面の検索窓を追加★ */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <SearchIcon />
+          </div>
+          <input
+            type="text"
+            placeholder="単語、意味、カタカナで検索..."
+            className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-gray-200 shadow-sm text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchSubmit} // Enterキーでリストへ遷移
+          />
+        </div>
+
+        {/* ジャンル別 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="mb-4">
+            <span className="block text-lg font-bold text-slate-800">ジャンル別</span>
+            <span className="text-xs text-gray-400">Categories</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {GENRES.map(g => (
+              <button key={g} onClick={() => navigateToList('genre', g)} className="bg-slate-50 border border-gray-200 py-3 rounded-xl text-sm font-bold text-slate-700 shadow-sm active:scale-[0.98] hover:bg-white hover:border-blue-500 hover:text-blue-600 transition-all">
+                {g}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
 
-      {/* ジャンル別 (常に展開) */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-        <div className="mb-3 text-left">
-          <span className="block text-lg font-bold text-slate-800">ジャンル別</span>
-          <span className="text-xs text-gray-400">Categories</span>
+        {/* レベル別 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="mb-4">
+            <span className="block text-lg font-bold text-slate-800">レベル別</span>
+            <span className="text-xs text-gray-400">Difficulty Levels</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {LEVELS.map((l) => (
+              <button key={l} onClick={() => navigateToList('level', l)} className="flex flex-col items-center justify-center bg-slate-50 border border-gray-200 py-3 px-2 rounded-xl shadow-sm active:scale-[0.98] hover:bg-white hover:border-blue-500 group transition-all">
+                <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
+                <span className="text-[10px] text-gray-500 mt-0.5">{getLevelDescription(l)}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {GENRES.map(g => (
-            <button key={g} onClick={() => navigateToList('genre', g)} className="bg-white border border-gray-200 py-3 rounded-xl text-sm font-bold text-slate-600 shadow-sm active:scale-[0.98] hover:border-blue-400 hover:text-blue-600 transition-all">
-              {g}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* レベル別 (常に展開・2列表示・ALL追加) */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-        <div className="mb-3 text-left">
-          <span className="block text-lg font-bold text-slate-800">レベル別</span>
-          <span className="text-xs text-gray-400">Difficulty Levels</span>
+        {/* テストモード & コラム */}
+        <div className="grid grid-cols-2 gap-4 mt-2">
+          <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-2xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-28 relative overflow-hidden">
+            <div className="absolute -right-4 -bottom-4 text-blue-400/30"><svg width="60" height="60" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg></div>
+            <span className="font-black text-xl mb-1 relative z-10">テストモード</span>
+            <span className="text-xs font-bold opacity-80 tracking-widest relative z-10">Test</span>
+          </button>
+          <button onClick={() => setActiveTab('blog')} className="bg-white border border-gray-200 text-slate-800 rounded-2xl p-5 shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center h-28 relative overflow-hidden hover:border-blue-400 group">
+            <div className="absolute -right-4 -bottom-4 text-gray-100 group-hover:text-blue-50 transition-colors"><svg width="60" height="60" viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v2H4zm0 4h16v2H4zm0 4h16v2H4zm0 4h16v2H4z"/></svg></div>
+            <span className="font-black text-xl mb-1 relative z-10 group-hover:text-blue-600 transition-colors">コラム</span>
+            <span className="text-xs font-bold text-gray-400 tracking-widest relative z-10">Column</span>
+          </button>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {LEVELS.map((l) => (
-            <button key={l} onClick={() => navigateToList('level', l)} className="flex flex-col items-center justify-center bg-white border border-gray-200 py-3 px-2 rounded-xl shadow-sm active:scale-[0.98] hover:border-blue-400 group transition-all">
-              <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
-              <span className="text-[10px] text-gray-400 mt-1">{getLevelDescription(l)}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* テストモード & コラム (アイコンなし・大文字小文字修正) */}
-      <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-2xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-28">
-          <span className="font-black text-xl mb-1">テストモード</span>
-          <span className="text-xs font-bold opacity-80 tracking-widest">Test</span>
-        </button>
-        <button onClick={() => setActiveTab('blog')} className="bg-white border border-gray-200 text-slate-800 rounded-2xl p-5 shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center h-28">
-          <span className="font-black text-xl mb-1">コラム</span>
-          <span className="text-xs font-bold text-gray-400 tracking-widest">Column</span>
-        </button>
       </div>
     </div>
   );
@@ -284,7 +295,10 @@ export default function ClientPage({ words, posts }) {
         <div className={`overflow-hidden transition-all duration-500 ease-in-out bg-white ${(activeTab === 'list') ? 'max-h-[340px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="pb-8">
             <div className="px-3 pb-3">
-              <input type="text" placeholder="リスト内検索..." className="w-full rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5 text-base focus:bg-white focus:border-blue-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
+                <input type="text" placeholder="リスト内検索..." className="w-full rounded-lg bg-gray-100 border border-gray-200 pl-10 pr-4 py-2.5 text-base focus:bg-white focus:border-blue-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              </div>
             </div>
             
             <div className="flex flex-wrap justify-center px-3 gap-2">
