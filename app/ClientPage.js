@@ -15,6 +15,8 @@ const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" hei
 const VideoIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>);
 const CategoryIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>);
 const LevelIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>);
+// ★文字サイズ変更アイコン
+const TextSizeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
@@ -25,10 +27,40 @@ function DetailRow({ label, content }) {
   return (
     <div>
       <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
-      <span className="text-gray-700">{safeContent}</span>
+      <span className="text-gray-700 whitespace-pre-wrap leading-relaxed block">{safeContent}</span>
     </div>
   );
 }
+
+// --- リッチテキスト対応ヘルパー ---
+const RichText = ({ textObj }) => {
+  if (!textObj) return null;
+  const { annotations, plain_text, href } = textObj;
+  
+  const styleClass = [
+    annotations.bold ? "font-bold" : "",
+    annotations.italic ? "italic" : "",
+    annotations.strikethrough ? "line-through" : "",
+    annotations.underline ? "underline" : "",
+    annotations.code ? "bg-gray-100 rounded px-1 font-mono text-red-500" : "",
+  ].join(" ");
+
+  const colorMap = {
+    "blue": "text-blue-600", "blue_background": "bg-blue-100",
+    "brown": "text-amber-700", "brown_background": "bg-amber-100",
+    "gray": "text-gray-500", "gray_background": "bg-gray-200",
+    "green": "text-green-600", "green_background": "bg-green-100",
+    "orange": "text-orange-600", "orange_background": "bg-orange-100",
+    "pink": "text-pink-600", "pink_background": "bg-pink-100",
+    "purple": "text-purple-600", "purple_background": "bg-purple-100",
+    "red": "text-red-600", "red_background": "bg-red-100",
+    "yellow": "text-yellow-600", "yellow_background": "bg-yellow-100",
+  };
+  const colorClass = annotations.color !== 'default' ? (colorMap[annotations.color] || "") : "";
+
+  const content = <span className={`${styleClass} ${colorClass} whitespace-pre-wrap`}>{plain_text}</span>;
+  return href ? <a href={href} target="_blank" rel="noreferrer" className="underline text-blue-500 hover:text-blue-700">{content}</a> : content;
+};
 
 // --- ブロックレンダラー ---
 const RenderBlock = ({ block }) => {
@@ -36,22 +68,28 @@ const RenderBlock = ({ block }) => {
   const value = block[type];
   if (type === 'divider') return <hr className="my-6 border-gray-200" />;
   if (!value) return null;
-  const text = value.rich_text ? value.rich_text.map(t => t.plain_text).join('') : '';
-  const caption = value.caption ? value.caption.map(t => t.plain_text).join('') : '';
+
+  const renderRichText = () => {
+    if (value.rich_text && Array.isArray(value.rich_text)) {
+      return value.rich_text.map((t, i) => <RichText key={i} textObj={t} />);
+    }
+    return "";
+  };
+
   const url = value.url || value.external?.url || value.file?.url || "";
 
   switch (type) {
-    case 'heading_1': return <h2 className="text-2xl font-black text-slate-800 mt-8 mb-4 border-b pb-2 border-blue-200">{text}</h2>;
-    case 'heading_2': return <h3 className="text-xl font-bold text-slate-700 mt-6 mb-3 border-l-4 border-blue-500 pl-3">{text}</h3>;
-    case 'heading_3': return <h4 className="text-lg font-bold text-slate-700 mt-4 mb-2">{text}</h4>;
-    case 'paragraph': return <p className="text-slate-600 mb-4 leading-relaxed text-sm whitespace-pre-wrap">{text}</p>;
-    case 'bulleted_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-disc pl-1">{text}</li>;
-    case 'numbered_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-decimal pl-1">{text}</li>;
-    case 'quote': return <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-500 my-4 bg-gray-50 py-3 pr-2 text-sm rounded-r">{text}</blockquote>;
+    case 'heading_1': return <h2 className="text-2xl font-black text-slate-800 mt-8 mb-4 border-b pb-2 border-blue-200">{renderRichText()}</h2>;
+    case 'heading_2': return <h3 className="text-xl font-bold text-slate-700 mt-6 mb-3 border-l-4 border-blue-500 pl-3">{renderRichText()}</h3>;
+    case 'heading_3': return <h4 className="text-lg font-bold text-slate-700 mt-4 mb-2">{renderRichText()}</h4>;
+    case 'paragraph': return <p className="text-slate-600 mb-4 leading-relaxed text-sm whitespace-pre-wrap">{renderRichText()}</p>;
+    case 'bulleted_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-disc pl-1">{renderRichText()}</li>;
+    case 'numbered_list_item': return <li className="text-slate-600 ml-4 mb-1 text-sm list-decimal pl-1">{renderRichText()}</li>;
+    case 'quote': return <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-500 my-4 bg-gray-50 py-3 pr-2 text-sm rounded-r whitespace-pre-wrap">{renderRichText()}</blockquote>;
     case 'image': 
-      return (<figure className="my-6"><div className="rounded-xl overflow-hidden shadow-sm border border-gray-100"><img src={url} alt="Article Image" className="w-full h-auto" /></div>{caption && <figcaption className="text-center text-xs text-gray-400 mt-2">{caption}</figcaption>}</figure>);
+      return (<figure className="my-6"><div className="rounded-xl overflow-hidden shadow-sm border border-gray-100"><img src={url} alt="Article Image" className="w-full h-auto" /></div>{value.caption && <figcaption className="text-center text-xs text-gray-400 mt-2">{value.caption.map(t=>t.plain_text).join('')}</figcaption>}</figure>);
     case 'audio':
-      return (<div className="my-6"><audio controls src={url} className="w-full h-10 focus:outline-none" />{caption && <p className="text-xs text-slate-500 text-center mt-1">{caption}</p>}</div>);
+      return (<div className="my-6"><audio controls src={url} className="w-full h-10 focus:outline-none" /></div>);
     case 'file':
       const cleanUrl = url?.split('?')[0].toLowerCase() || "";
       if (['.mp3', '.wav', '.m4a', '.aac', '.ogg'].some(ext => cleanUrl.endsWith(ext))) {
@@ -72,6 +110,7 @@ export default function ClientPage({ words, posts }) {
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [selectedLevel, setSelectedLevel] = useState('Level 1');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLargeText, setIsLargeText] = useState(false); // ★文字サイズ管理
   
   const [expandedId, setExpandedId] = useState(null);
   const [videoModalItem, setVideoModalItem] = useState(null);
@@ -181,9 +220,7 @@ export default function ClientPage({ words, posts }) {
       const meaning = String(item.meaning || '');
       const katakana = String(item.katakana || '');
       const matchSearch = (word + meaning + katakana).toLowerCase().includes(searchQuery.toLowerCase());
-      
       if (!matchSearch) return false;
-      
       if (filterMode === 'genre') {
         return selectedGenre === 'ALL' || item.genre === selectedGenre;
       } else if (filterMode === 'level') {
@@ -197,17 +234,25 @@ export default function ClientPage({ words, posts }) {
   // --- HOME コンポーネント ---
   const HomeView = () => (
     <div className="min-h-screen flex flex-col justify-center animate-fadeIn relative overflow-hidden bg-slate-50">
-      {/* ★背景パターン（blurを強化） */}
       <div className="absolute inset-0 z-0 opacity-[0.04] blur-[1px] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 C 45 0, 60 15, 60 30 C 60 45, 45 60, 30 60 C 15 60, 0 45, 0 30 C 0 15, 15 0, 30 0 Z M 30 5 C 16 5, 5 16, 5 30 C 5 44, 16 55, 30 55 C 44 55, 55 44, 55 30 C 55 16, 44 5, 30 5 Z' fill='none' stroke='%23334155' stroke-width='2'/%3E%3Cpath d='M 15 10 Q 25 20, 15 30 Q 5 40, 15 50' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-dasharray='4 6'/%3E%3Cpath d='M 45 10 Q 35 20, 45 30 Q 55 40, 45 50' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-dasharray='4 6'/%3E%3C/svg%3E")`, backgroundSize: '120px 120px' }}></div>
       
+      {/* ★文字サイズ変更ボタン (右上) */}
+      <div className="absolute top-4 right-4 z-50">
+        <button 
+          onClick={() => setIsLargeText(!isLargeText)} 
+          className={`flex items-center gap-2 px-3 py-2 rounded-full border transition-all ${isLargeText ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-gray-300 shadow-sm'}`}
+        >
+          <TextSizeIcon />
+          <span className="text-xs font-bold">{isLargeText ? '文字: 大' : '文字: 標準'}</span>
+        </button>
+      </div>
+
       <div className="p-6 flex flex-col gap-8 max-w-md mx-auto w-full z-10 pb-20">
-        {/* タイトル */}
         <div className="text-center">
           <h1 className="text-6xl font-black text-slate-800 tracking-tighter mb-2 drop-shadow-sm">Basevo</h1>
           <p className="text-xs font-bold text-blue-600 tracking-[0.4em] uppercase">- baseball vocabulary -</p>
         </div>
 
-        {/* ★ジャンル（枠を追加） */}
         <div className="w-full border-2 border-slate-200 rounded-3xl p-5 bg-white/60 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-center gap-2 mb-4">
             <CategoryIcon />
@@ -222,7 +267,6 @@ export default function ClientPage({ words, posts }) {
           </div>
         </div>
 
-        {/* ★レベル（枠を追加） */}
         <div className="w-full border-2 border-slate-200 rounded-3xl p-5 bg-white/60 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-center gap-2 mb-4">
             <LevelIcon />
@@ -237,7 +281,6 @@ export default function ClientPage({ words, posts }) {
           </div>
         </div>
 
-        {/* テストモード & コラム */}
         <div className="grid grid-cols-2 gap-4 w-full mt-2">
           <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-slate-800 to-slate-700 text-white rounded-2xl p-5 shadow-lg active:scale-95 transition-transform flex flex-col items-center justify-center h-32 border-2 border-transparent">
             <span className="font-bold text-xl mb-1">テストモード</span>
@@ -253,7 +296,7 @@ export default function ClientPage({ words, posts }) {
   );
 
   return (
-    <div className="min-h-screen font-sans text-gray-800 bg-[#f8f9fa]">
+    <div className={`min-h-screen font-sans text-gray-800 bg-[#f8f9fa] ${isLargeText ? 'large-text-mode' : ''}`}>
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
       {/* ヘッダー (Listタブのみ表示) */}
@@ -366,7 +409,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* === テストモード (ジャンル・レベル両方から選択可能) === */}
+        {/* === テストモード === */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
@@ -375,27 +418,19 @@ export default function ClientPage({ words, posts }) {
                   <h2 className="text-2xl font-black text-slate-800">TEST MODE</h2>
                   <p className="text-xs text-gray-400 font-bold">Select mode to start</p>
                 </div>
-
-                {/* ジャンルから選択 */}
                 <div className="w-full max-w-sm border-2 border-slate-200 rounded-3xl p-5 bg-white shadow-sm">
                   <h3 className="text-sm font-bold text-slate-500 mb-3 text-center tracking-widest">ジャンルから選択</h3>
                   <div className="grid grid-cols-2 gap-3">
                     {GENRES.map(g => (
-                      <button key={g} onClick={() => startTest('genre', g)} className="p-3 bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:border-blue-500 hover:bg-blue-50 font-bold text-slate-700 active:scale-95 transition-all text-sm">
-                        {g}
-                      </button>
+                      <button key={g} onClick={() => startTest('genre', g)} className="p-3 bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:border-blue-500 hover:bg-blue-50 font-bold text-slate-700 active:scale-95 transition-all text-sm">{g}</button>
                     ))}
                   </div>
                 </div>
-
-                {/* レベルから選択 (日本語説明削除) */}
                 <div className="w-full max-w-sm border-2 border-slate-200 rounded-3xl p-5 bg-white shadow-sm">
                   <h3 className="text-sm font-bold text-slate-500 mb-3 text-center tracking-widest">レベルから選択</h3>
                   <div className="grid grid-cols-2 gap-3">
                     {LEVELS.map(l => (
-                      <button key={l} onClick={() => startTest('level', l)} className="p-3 flex flex-col items-center bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:border-blue-500 hover:bg-blue-50 active:scale-95 transition-all">
-                        <span className="font-bold text-slate-700">{l}</span>
-                      </button>
+                      <button key={l} onClick={() => startTest('level', l)} className="p-3 flex flex-col items-center bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:border-blue-500 hover:bg-blue-50 active:scale-95 transition-all"><span className="font-bold text-slate-700">{l}</span></button>
                     ))}
                   </div>
                 </div>
@@ -522,6 +557,19 @@ export default function ClientPage({ words, posts }) {
         .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
         .aspect-video { aspect-ratio: 16 / 9; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        
+        /* ★文字サイズ拡大モードのCSS上書き★ */
+        .large-text-mode {
+          font-size: 110%; /* 全体のベースサイズを上げる */
+        }
+        .large-text-mode .text-xs { font-size: 0.875rem !important; line-height: 1.25rem !important; }
+        .large-text-mode .text-sm { font-size: 1rem !important; line-height: 1.5rem !important; }
+        .large-text-mode .text-base { font-size: 1.125rem !important; line-height: 1.75rem !important; }
+        .large-text-mode .text-lg { font-size: 1.25rem !important; line-height: 1.75rem !important; }
+        .large-text-mode .text-xl { font-size: 1.5rem !important; line-height: 2rem !important; }
+        .large-text-mode .text-2xl { font-size: 1.875rem !important; line-height: 2.25rem !important; }
+        .large-text-mode .text-3xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
+        .large-text-mode h1, .large-text-mode h2, .large-text-mode h3 { letter-spacing: 0.02em; }
       `}</style>
     </div>
   );
