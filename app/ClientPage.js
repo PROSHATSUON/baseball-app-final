@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo, useRef, useEffect } from 'react';
 
-// --- アイコン ---
+// --- SVG アイコン定義 ---
 const SpeakerIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>);
 const PlayIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>);
 const ArrowUpIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>);
@@ -15,28 +15,19 @@ const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" hei
 const VideoIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>);
 const CategoryIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>);
 const LevelIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>);
-// ★文字サイズ変更アイコン
 const TextSizeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
-// --- 安全な表示用コンポーネント ---
-function DetailRow({ label, content }) {
-  if (!content) return null;
-  const safeContent = (typeof content === 'object') ? JSON.stringify(content) : String(content);
-  return (
-    <div>
-      <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
-      <span className="text-gray-700 whitespace-pre-wrap leading-relaxed block">{safeContent}</span>
-    </div>
-  );
-}
-
-// --- リッチテキスト対応ヘルパー ---
+// --- リッチテキスト対応ヘルパー（太文字・色・リンク・改行対応） ---
 const RichText = ({ textObj }) => {
   if (!textObj) return null;
-  const { annotations, plain_text, href } = textObj;
-  
+  // 安全にデータを取り出す
+  const annotations = textObj.annotations || {};
+  const plain_text = textObj.plain_text || "";
+  const href = textObj.href || null;
+
+  // スタイルのマッピング
   const styleClass = [
     annotations.bold ? "font-bold" : "",
     annotations.italic ? "italic" : "",
@@ -45,6 +36,7 @@ const RichText = ({ textObj }) => {
     annotations.code ? "bg-gray-100 rounded px-1 font-mono text-red-500" : "",
   ].join(" ");
 
+  // 色のマッピング
   const colorMap = {
     "blue": "text-blue-600", "blue_background": "bg-blue-100",
     "brown": "text-amber-700", "brown_background": "bg-amber-100",
@@ -56,19 +48,22 @@ const RichText = ({ textObj }) => {
     "red": "text-red-600", "red_background": "bg-red-100",
     "yellow": "text-yellow-600", "yellow_background": "bg-yellow-100",
   };
-  const colorClass = annotations.color !== 'default' ? (colorMap[annotations.color] || "") : "";
+  const colorClass = (annotations.color && annotations.color !== 'default') ? (colorMap[annotations.color] || "") : "";
 
+  // 改行を反映させるために whitespace-pre-wrap を付与
   const content = <span className={`${styleClass} ${colorClass} whitespace-pre-wrap`}>{plain_text}</span>;
+
   return href ? <a href={href} target="_blank" rel="noreferrer" className="underline text-blue-500 hover:text-blue-700">{content}</a> : content;
 };
 
-// --- ブロックレンダラー ---
+// --- ブロックレンダラー (コラム用) ---
 const RenderBlock = ({ block }) => {
   const { type } = block;
   const value = block[type];
   if (type === 'divider') return <hr className="my-6 border-gray-200" />;
   if (!value) return null;
 
+  // rich_textを全て安全にレンダリングする関数
   const renderRichText = () => {
     if (value.rich_text && Array.isArray(value.rich_text)) {
       return value.rich_text.map((t, i) => <RichText key={i} textObj={t} />);
@@ -100,6 +95,32 @@ const RenderBlock = ({ block }) => {
   }
 };
 
+// --- 単語詳細用の安全な表示コンポーネント ---
+function DetailRow({ label, content }) {
+  if (!content) return null;
+  
+  // もしcontentが配列（リッチテキスト）だったら、それをレンダリング
+  if (Array.isArray(content)) {
+    return (
+      <div>
+        <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
+        <span className="text-gray-700 whitespace-pre-wrap leading-relaxed block">
+          {content.map((t, i) => <RichText key={i} textObj={t} />)}
+        </span>
+      </div>
+    );
+  }
+
+  // 文字列の場合
+  const safeContent = (typeof content === 'object') ? JSON.stringify(content) : String(content);
+  return (
+    <div>
+      <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
+      <span className="text-gray-700 whitespace-pre-wrap leading-relaxed block">{safeContent}</span>
+    </div>
+  );
+}
+
 export default function ClientPage({ words, posts }) {
   const safeWords = (words && Array.isArray(words)) ? words : [];
   const safePosts = (posts && Array.isArray(posts)) ? posts : [];
@@ -110,7 +131,7 @@ export default function ClientPage({ words, posts }) {
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [selectedLevel, setSelectedLevel] = useState('Level 1');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLargeText, setIsLargeText] = useState(false); // 文字サイズ管理
+  const [isLargeText, setIsLargeText] = useState(false);
   
   const [expandedId, setExpandedId] = useState(null);
   const [videoModalItem, setVideoModalItem] = useState(null);
@@ -216,7 +237,10 @@ export default function ClientPage({ words, posts }) {
 
   const filteredWords = useMemo(() => {
     return safeWords.filter((item) => {
-      const matchSearch = (item.word + item.meaning + item.katakana).toLowerCase().includes(searchQuery.toLowerCase());
+      const word = String(item.word || '');
+      const meaning = String(item.meaning || '');
+      const katakana = String(item.katakana || '');
+      const matchSearch = (word + meaning + katakana).toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchSearch) return false;
       if (filterMode === 'genre') {
         return selectedGenre === 'ALL' || item.genre === selectedGenre;
@@ -234,13 +258,11 @@ export default function ClientPage({ words, posts }) {
       <div className="absolute inset-0 z-0 opacity-[0.04] blur-[1px] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 C 45 0, 60 15, 60 30 C 60 45, 45 60, 30 60 C 15 60, 0 45, 0 30 C 0 15, 15 0, 30 0 Z M 30 5 C 16 5, 5 16, 5 30 C 5 44, 16 55, 30 55 C 44 55, 55 44, 55 30 C 55 16, 44 5, 30 5 Z' fill='none' stroke='%23334155' stroke-width='2'/%3E%3Cpath d='M 15 10 Q 25 20, 15 30 Q 5 40, 15 50' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-dasharray='4 6'/%3E%3Cpath d='M 45 10 Q 35 20, 45 30 Q 55 40, 45 50' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-dasharray='4 6'/%3E%3C/svg%3E")`, backgroundSize: '120px 120px' }}></div>
       
       <div className="p-6 flex flex-col gap-8 max-w-md mx-auto w-full z-10 pb-24">
-        {/* タイトル */}
         <div className="text-center">
           <h1 className="text-6xl font-black text-slate-800 tracking-tighter mb-2 drop-shadow-sm">Basevo</h1>
           <p className="text-xs font-bold text-blue-600 tracking-[0.4em] uppercase">- baseball vocabulary -</p>
         </div>
 
-        {/* ジャンル */}
         <div className="w-full border-2 border-slate-200 rounded-3xl p-5 bg-white/60 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-center gap-2 mb-4">
             <CategoryIcon />
@@ -255,7 +277,6 @@ export default function ClientPage({ words, posts }) {
           </div>
         </div>
 
-        {/* レベル */}
         <div className="w-full border-2 border-slate-200 rounded-3xl p-5 bg-white/60 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-center gap-2 mb-4">
             <LevelIcon />
@@ -270,7 +291,6 @@ export default function ClientPage({ words, posts }) {
           </div>
         </div>
 
-        {/* テストモード & コラム */}
         <div className="grid grid-cols-2 gap-4 w-full mt-2">
           <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-slate-800 to-slate-700 text-white rounded-2xl p-5 shadow-lg active:scale-95 transition-transform flex flex-col items-center justify-center h-32 border-2 border-transparent">
             <span className="font-bold text-xl mb-1">テストモード</span>
@@ -282,7 +302,7 @@ export default function ClientPage({ words, posts }) {
           </button>
         </div>
 
-        {/* ★文字サイズ変更ボタン（一番下に配置） */}
+        {/* 文字サイズ変更ボタン */}
         <div className="flex justify-center mt-4">
           <button 
             onClick={() => setIsLargeText(!isLargeText)} 
@@ -340,14 +360,14 @@ export default function ClientPage({ words, posts }) {
         </div>
       </div>
 
-      {/* MENUボタン (Listの時だけ表示) */}
+      {/* MENUボタン */}
       {activeTab === 'list' && (
         <div className={`fixed top-0 left-0 w-full z-40 flex justify-center pointer-events-none transition-transform duration-500 ${(activeTab === 'list' && !isHeaderVisible) ? 'translate-y-0' : '-translate-y-full'}`}>
           <button onClick={toggleHeader} className="mt-[-2px] bg-white/90 backdrop-blur-sm border border-gray-200 border-t-0 rounded-b-xl px-6 py-1 shadow-md text-blue-600 pointer-events-auto flex flex-col items-center"><ChevronDownIcon /><span className="text-[9px] font-bold mt-0.5">MENU</span></button>
         </div>
       )}
 
-      {/* HOMEに戻るボタン (Test/Columnの時だけ表示) */}
+      {/* HOMEに戻るボタン */}
       {(activeTab === 'test' || activeTab === 'blog') && (
         <div className="fixed top-0 left-0 w-full z-30 bg-white/90 backdrop-blur-sm shadow-sm border-b border-gray-200 px-4 py-3 flex justify-between items-center">
            <button onClick={() => setActiveTab('home')} className="flex items-center gap-1 text-gray-500 hover:text-blue-600 font-bold text-xs px-3 py-1.5 bg-gray-100 rounded-lg">
