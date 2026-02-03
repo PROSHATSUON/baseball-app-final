@@ -136,15 +136,6 @@ export default function ClientPage({ words, posts }) {
     window.scrollTo({ top: 0 });
   };
 
-  // ★検索実行時の処理（ホーム画面用）
-  const handleSearchSubmit = (e) => {
-    if (e.key === 'Enter' && searchQuery.trim() !== '') {
-      // 検索キーワードがある状態でEnterが押されたら、リスト画面に遷移
-      setActiveTab('list');
-      window.scrollTo({ top: 0 });
-    }
-  };
-
   const startTest = (type, value) => {
     let candidates = safeWords;
     if (type === 'genre') {
@@ -194,84 +185,57 @@ export default function ClientPage({ words, posts }) {
     }
   };
 
-  // --- HOME コンポーネント (新デザイン & 検索窓追加) ---
+  // --- HOME コンポーネント (シンプル & プロフェッショナル) ---
   const HomeView = () => (
-    <div className="relative overflow-hidden animate-fadeIn min-h-screen bg-[#f8f9fa]">
-      {/* 背景のアクセント（抽象的なフィールド） */}
-      <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-blue-50 to-transparent -z-10"></div>
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-green-50 rounded-full blur-3xl opacity-60 -z-10"></div>
-      <div className="absolute top-32 -left-32 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-60 -z-10"></div>
+    <div className="p-5 flex flex-col gap-6 animate-fadeIn pb-24 pt-10 max-w-md mx-auto">
+      
+      {/* タイトル (検索窓削除) */}
+      <div className="text-center mb-2">
+        <h1 className="text-5xl font-black text-slate-800 tracking-tighter mb-1">Basevo</h1>
+        <p className="text-xs font-bold text-blue-600 tracking-[0.3em] uppercase">- baseball vocabulary -</p>
+      </div>
 
-      <div className="p-5 pb-32 flex flex-col gap-6 max-w-md mx-auto">
-        {/* タイトルヘッダー */}
-        <div className="pt-8 pb-4 text-center">
-          <h1 className="text-5xl font-black tracking-tighter text-slate-800 mb-1">
-            Basevo
-          </h1>
-          <p className="text-sm font-bold text-blue-600 tracking-[0.2em] uppercase">
-            - baseball vocabulary -
-          </p>
+      {/* ジャンル別 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-800">ジャンル別</h2>
+          <p className="text-xs text-gray-400">Categories</p>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          {GENRES.map(g => (
+            <button key={g} onClick={() => navigateToList('genre', g)} className="bg-white border border-gray-200 py-3 rounded-xl text-sm font-bold text-slate-600 shadow-sm active:scale-[0.98] hover:border-blue-500 hover:text-blue-600 transition-all">
+              {g}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {/* ★ホーム画面の検索窓を追加★ */}
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <SearchIcon />
-          </div>
-          <input
-            type="text"
-            placeholder="単語、意味、カタカナで検索..."
-            className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-gray-200 shadow-sm text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearchSubmit} // Enterキーでリストへ遷移
-          />
+      {/* レベル別 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-800">レベル別</h2>
+          <p className="text-xs text-gray-400">Difficulty Levels</p>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          {LEVELS.map((l) => (
+            <button key={l} onClick={() => navigateToList('level', l)} className="flex flex-col items-center justify-center bg-white border border-gray-200 py-3 px-2 rounded-xl shadow-sm active:scale-[0.98] hover:border-blue-500 group transition-all">
+              <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">{getLevelDescription(l)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {/* ジャンル別 */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="mb-4">
-            <span className="block text-lg font-bold text-slate-800">ジャンル別</span>
-            <span className="text-xs text-gray-400">Categories</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {GENRES.map(g => (
-              <button key={g} onClick={() => navigateToList('genre', g)} className="bg-slate-50 border border-gray-200 py-3 rounded-xl text-sm font-bold text-slate-700 shadow-sm active:scale-[0.98] hover:bg-white hover:border-blue-500 hover:text-blue-600 transition-all">
-                {g}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* レベル別 */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="mb-4">
-            <span className="block text-lg font-bold text-slate-800">レベル別</span>
-            <span className="text-xs text-gray-400">Difficulty Levels</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {LEVELS.map((l) => (
-              <button key={l} onClick={() => navigateToList('level', l)} className="flex flex-col items-center justify-center bg-slate-50 border border-gray-200 py-3 px-2 rounded-xl shadow-sm active:scale-[0.98] hover:bg-white hover:border-blue-500 group transition-all">
-                <span className="font-bold text-slate-700 group-hover:text-blue-600">{l}</span>
-                <span className="text-[10px] text-gray-500 mt-0.5">{getLevelDescription(l)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* テストモード & コラム */}
-        <div className="grid grid-cols-2 gap-4 mt-2">
-          <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-2xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-28 relative overflow-hidden">
-            <div className="absolute -right-4 -bottom-4 text-blue-400/30"><svg width="60" height="60" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg></div>
-            <span className="font-black text-xl mb-1 relative z-10">テストモード</span>
-            <span className="text-xs font-bold opacity-80 tracking-widest relative z-10">Test</span>
-          </button>
-          <button onClick={() => setActiveTab('blog')} className="bg-white border border-gray-200 text-slate-800 rounded-2xl p-5 shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center h-28 relative overflow-hidden hover:border-blue-400 group">
-            <div className="absolute -right-4 -bottom-4 text-gray-100 group-hover:text-blue-50 transition-colors"><svg width="60" height="60" viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v2H4zm0 4h16v2H4zm0 4h16v2H4zm0 4h16v2H4z"/></svg></div>
-            <span className="font-black text-xl mb-1 relative z-10 group-hover:text-blue-600 transition-colors">コラム</span>
-            <span className="text-xs font-bold text-gray-400 tracking-widest relative z-10">Column</span>
-          </button>
-        </div>
+      {/* テストモード & コラム */}
+      <div className="grid grid-cols-2 gap-4">
+        <button onClick={() => setActiveTab('test')} className="bg-gradient-to-br from-slate-800 to-slate-700 text-white rounded-xl p-5 shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center h-28">
+          <span className="font-bold text-xl mb-1">テストモード</span>
+          <span className="text-xs font-bold opacity-60 tracking-widest uppercase">Test</span>
+        </button>
+        <button onClick={() => setActiveTab('blog')} className="bg-white border border-gray-200 text-slate-800 rounded-xl p-5 shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center h-28 hover:border-blue-400">
+          <span className="font-bold text-xl mb-1">コラム</span>
+          <span className="text-xs font-bold text-gray-400 tracking-widest uppercase">Column</span>
+        </button>
       </div>
     </div>
   );
