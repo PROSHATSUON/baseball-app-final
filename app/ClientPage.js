@@ -125,11 +125,9 @@ export default function ClientPage({ words, posts }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // ★スワイプ用 (useRefに変更)
+  // スワイプ用
   const touchStartX = useRef(null);
   const touchCurrentX = useRef(null);
-  
-  // 描画用のstate
   const [swipeX, setSwipeX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -147,6 +145,18 @@ export default function ClientPage({ words, posts }) {
     else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
   }, [blogModalPost, videoModalItem]);
+
+  // ★自動スクロール機能 (単語展開時)
+  useEffect(() => {
+    if (expandedId && activeTab === 'list') {
+      const el = document.getElementById(`word-card-${expandedId}`);
+      if (el) {
+        // ヘッダーや少しの余白を考慮して、要素の上端から少しずらした位置へスクロール
+        const y = el.getBoundingClientRect().top + window.scrollY - 120;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }
+  }, [expandedId, activeTab]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -221,22 +231,17 @@ export default function ClientPage({ words, posts }) {
   const nextCard = (e) => {
     e?.stopPropagation();
     if (currentQuestionIndex < testQuestions.length - 1) {
-      // 1. 現在のカードを左へ退場させる
       setSwipeX(-500); 
-      
       setTimeout(() => {
-        // 2. データを更新し、新しいカードを右側に「瞬間移動（テレポート）」させる
         setIsFlipped(false);
         setCurrentQuestionIndex(prev => prev + 1);
-        setIsDragging(true); // アニメーション（transition）を一時的に無効化
-        setSwipeX(500);      // 右端へセット
-
-        // 3. わずかな時間をおいて、新しいカードを中央へ「入場」させる
+        setIsDragging(true); 
+        setSwipeX(500);      
         setTimeout(() => {
-          setIsDragging(false); // アニメーションを有効化
-          setSwipeX(0);         // 中央へスライド
+          setIsDragging(false); 
+          setSwipeX(0);         
         }, 50);
-      }, 200); // 退場アニメーションの時間
+      }, 200); 
     } else {
       setTestPhase('result');
     }
@@ -244,13 +249,13 @@ export default function ClientPage({ words, posts }) {
 
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
 
-  // ★スワイプ検出ロジック (useRef版)
+  // スワイプ検出ロジック (useRef版)
   const minSwipeDistance = 50; 
 
   const onTouchStart = (e) => {
     touchStartX.current = e.targetTouches[0].clientX;
-    touchCurrentX.current = e.targetTouches[0].clientX; // 初期値セット
-    setIsDragging(true); // 指で動かしている間はtransitionを無効にして追従性を良くする
+    touchCurrentX.current = e.targetTouches[0].clientX; 
+    setIsDragging(true); 
   };
 
   const onTouchMove = (e) => {
@@ -268,22 +273,19 @@ export default function ClientPage({ words, posts }) {
     }
     
     const diff = touchCurrentX.current - touchStartX.current;
-    setIsDragging(false); // 指を離したらアニメーション有効化
+    setIsDragging(false); 
 
-    // スワイプ判定
-    if (diff < -80) { // 左へ大きく動かしたら次へ
+    if (diff < -80) { 
       nextCard();
-    } else if (diff > 80) { // 右へ動かした場合は今回は戻すだけ
+    } else if (diff > 80) { 
       setSwipeX(0);
     } else {
-      // 微小な動きはタップとみなす
       if (Math.abs(diff) < 5) {
         setIsFlipped(prev => !prev);
       }
       setSwipeX(0);
     }
     
-    // リセット
     touchStartX.current = null;
     touchCurrentX.current = null;
   };
@@ -372,7 +374,7 @@ export default function ClientPage({ words, posts }) {
     <div className={`min-h-screen font-sans text-gray-800 bg-[#f8f9fa] ${isLargeText ? 'large-text-mode' : ''}`}>
       <audio ref={audioRef} style={{ display: 'none' }} preload="none" />
 
-      {/* ヘッダー */}
+      {/* ヘッダー (Listタブのみ表示) */}
       <div className={`fixed top-0 left-0 w-full z-30 bg-white shadow-sm transition-transform duration-500 ease-in-out border-b border-gray-200 ${(activeTab === 'list' && !isHeaderVisible) ? '-translate-y-full' : 'translate-y-0'} ${activeTab !== 'list' ? 'hidden' : ''}`}>
         <div className="px-4 pt-3 pb-2 bg-white relative z-20 flex items-center justify-between">
           <button onClick={() => setActiveTab('home')} className="flex items-center gap-1 text-gray-400 hover:text-blue-600 transition-colors font-bold text-xs px-2 py-1 bg-gray-50 rounded-lg">
@@ -383,6 +385,7 @@ export default function ClientPage({ words, posts }) {
           </div>
           <div className="w-16"></div>
         </div>
+        
         <div className={`overflow-hidden transition-all duration-500 ease-in-out bg-white ${(activeTab === 'list') ? 'max-h-[340px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="pb-8">
             <div className="px-3 pb-3">
@@ -391,6 +394,7 @@ export default function ClientPage({ words, posts }) {
                 <input type="text" placeholder="リスト内検索..." className="w-full rounded-lg bg-gray-100 border border-gray-200 pl-10 pr-4 py-2.5 text-base focus:bg-white focus:border-blue-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
             </div>
+            
             <div className="flex flex-wrap justify-center px-3 gap-2">
               {filterMode === 'genre' 
                 ? GENRES.map((genre) => (
@@ -401,6 +405,7 @@ export default function ClientPage({ words, posts }) {
                   ))
               }
             </div>
+            
             <div className="px-4 py-1 text-right text-[10px] text-gray-400">{filteredWords.length} Words Found</div>
           </div>
           <div onClick={toggleHeader} className="absolute bottom-0 left-0 w-full flex justify-center pb-1 cursor-pointer bg-gradient-to-t from-white to-transparent z-10">
@@ -429,14 +434,17 @@ export default function ClientPage({ words, posts }) {
 
       {/* メインエリア */}
       <div className="transition-all duration-500 ease-in-out" style={{ paddingTop: activeTab === 'home' ? '0px' : (activeTab === 'list' ? (isHeaderVisible ? '260px' : '60px') : '80px') }}>
-        {activeTab === 'home' && <HomeView />}
         
-        {/* 単語リスト */}
+        {/* === HOME画面 === */}
+        {activeTab === 'home' && <HomeView />}
+
+        {/* === 単語リスト (ID付き) === */}
         {activeTab === 'list' && (
           <div className="p-3 space-y-3 pb-24">
             {filteredWords.length === 0 ? <div className="text-center py-20 text-gray-400">見つかりませんでした</div> : 
               filteredWords.map((item) => (
-                <div key={item.id} onClick={() => setExpandedId(expandedId === item.id ? null : item.id)} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
+                // ★IDを追加してスクロール可能に
+                <div id={`word-card-${item.id}`} key={item.id} onClick={() => setExpandedId(expandedId === item.id ? null : item.id)} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
                   <div className="p-4 flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -477,6 +485,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
+        {/* ... (残りのコードは変更なし) ... */}
         {/* テストモード */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
@@ -523,7 +532,7 @@ export default function ClientPage({ words, posts }) {
                   >
                     {/* 表面 */}
                     <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100">
-                      {/* ★変更箇所: 日本語化 */}
+                      {/* ★日本語化 */}
                       <span className="text-xs font-bold text-blue-400 tracking-widest mb-4">タップして答えを見る</span>
                       <h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight break-words max-w-full">{testQuestions[currentQuestionIndex].word}</h3>
                       <div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
