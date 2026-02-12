@@ -128,7 +128,7 @@ export default function ClientPage({ words, posts }) {
   // ★スワイプ用 state
   const [touchStart, setTouchStart] = useState(null);
   const [swipeX, setSwipeX] = useState(0); // 現在の移動距離
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDragging, setIsDragging] = useState(false); // トランジション制御用
 
   const [showScrollBtns, setShowScrollBtns] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -218,46 +218,58 @@ export default function ClientPage({ words, posts }) {
   const nextCard = (e) => {
     e?.stopPropagation();
     if (currentQuestionIndex < testQuestions.length - 1) {
-      setSwipeX(-500); // 画面外へアニメーション
+      // 1. 現在のカードを左へ退場させる
+      setSwipeX(-500); 
+      
       setTimeout(() => {
+        // 2. データを更新し、新しいカードを右側に「瞬間移動（テレポート）」させる
         setIsFlipped(false);
         setCurrentQuestionIndex(prev => prev + 1);
-        setSwipeX(0); // 新しいカードは中央から
-      }, 200);
-    } else setTestPhase('result');
+        setIsDragging(true); // アニメーション（transition）を一時的に無効化
+        setSwipeX(500);      // 右端へセット
+
+        // 3. わずかな時間をおいて、新しいカードを中央へ「入場」させる
+        setTimeout(() => {
+          setIsDragging(false); // アニメーションを有効化
+          setSwipeX(0);         // 中央へスライド
+        }, 50);
+      }, 200); // 退場アニメーションの時間
+    } else {
+      setTestPhase('result');
+    }
   };
 
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
 
-  // ★リアルな動きのスワイプ検出ロジック
+  // ★スワイプ検出ロジック
+  const minSwipeDistance = 50; 
   const onTouchStart = (e) => {
+    setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
-    setIsDragging(true);
+    setIsDragging(true); // 指で動かしている間はtransitionを無効にして追従性を良くする
   };
 
   const onTouchMove = (e) => {
     if (!touchStart) return;
     const currentX = e.targetTouches[0].clientX;
     const diff = currentX - touchStart;
-    setSwipeX(diff); // 指に合わせてカードを動かす
+    setSwipeX(diff);
+    setTouchEnd(currentX);
   };
 
   const onTouchEnd = () => {
-    setIsDragging(false);
+    setIsDragging(false); // 指を離したらアニメーション有効化
     if (!touchStart) return;
     
-    // スワイプ判定 (左へ大きく動かしたら次へ)
-    if (swipeX < -80) { // 左へ80px以上動かしたら
+    // スワイプ判定
+    if (swipeX < -80) { // 左へ大きく動かしたら次へ
       nextCard();
-    } else if (swipeX > 80) {
-      // 右スワイプの動作（今回はリセットして元の位置に戻すだけ）
+    } else if (swipeX > 80) { // 右へ動かした場合は今回は戻すだけ
       setSwipeX(0);
     } else {
-      // 少ししか動かしてない場合は、タップとみなしてFlipする (クリック判定)
-      if (Math.abs(swipeX) < 5) {
-        setIsFlipped(!isFlipped);
-      }
-      setSwipeX(0); // 元の位置に戻る
+      // 微小な動きはタップとみなす
+      if (Math.abs(swipeX) < 5) setIsFlipped(!isFlipped);
+      setSwipeX(0);
     }
     setTouchStart(null);
   };
@@ -497,7 +509,7 @@ export default function ClientPage({ words, posts }) {
                   >
                     {/* 表面 */}
                     <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100">
-                      {/* ★日本語化 */}
+                      {/* ★変更箇所: 日本語化 */}
                       <span className="text-xs font-bold text-blue-400 tracking-widest mb-4">タップして答えを見る</span>
                       <h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight break-words max-w-full">{testQuestions[currentQuestionIndex].word}</h3>
                       <div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
