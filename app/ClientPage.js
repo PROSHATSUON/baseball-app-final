@@ -109,6 +109,7 @@ export default function ClientPage({ words, posts }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // スワイプ用 (Test Mode)
   const touchStartX = useRef(null);
   const touchCurrentX = useRef(null);
   const [swipeX, setSwipeX] = useState(0);
@@ -118,8 +119,8 @@ export default function ClientPage({ words, posts }) {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   
   const audioRef = useRef(null);
-  // インタラクションロック：開閉動作中はスクロール制御を止める
-  const isInteracting = useRef(false);
+  const lastScrollTopRef = useRef(0);
+  const isInteracting = useRef(false); // スクロール制御用ロック
   
   const GENRES = ["ALL", "全般", "打撃・走塁", "投球・守備", "成績・契約", "表現"];
   const LEVELS = ["ALL", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
@@ -130,22 +131,19 @@ export default function ClientPage({ words, posts }) {
     return () => { document.body.style.overflow = ''; };
   }, [blogModalPost, videoModalItem]);
 
-  // ★スクロール制御 (Header)
+  // ★スクロール制御 (ヘッダーの出し入れ)
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollTop = window.scrollY;
       setShowScrollBtns(currentScrollTop > 100);
       
-      // インタラクション中はヘッダーの出し入れをしない（ガタつき防止）
-      if (isInteracting.current) return;
+      if (isInteracting.current) return; // 自動操作中は無視
 
       if (activeTab === 'list') {
-        // 上まで戻ったらヘッダーを出す
         if (currentScrollTop < 10) {
           setIsHeaderVisible(true);
-        } 
-        // それ以外で少しでも下にスクロールしたら隠す (一度隠れたら基本隠したまま)
-        else if (currentScrollTop > 50) {
+        } else if (currentScrollTop > 50) {
+          // 少しでもスクロールしたら隠したまま (シンプル化)
           setIsHeaderVisible(false);
         }
       }
@@ -154,38 +152,33 @@ export default function ClientPage({ words, posts }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [activeTab]);
 
-  // ★単語カードの開閉ロジック
+  // ★単語開閉ロジック (その場で開いてから、なめらかに位置合わせ)
   const toggleExpand = (id) => {
-    isInteracting.current = true; // ロック開始
+    isInteracting.current = true; // スクロール制御ロック
 
     if (expandedId === id) {
-      // 閉じる場合
       setExpandedId(null);
       setTimeout(() => { isInteracting.current = false; }, 300);
     } else {
-      // 開く場合：まずはスクロールさせる
-      const el = document.getElementById(`word-card-${id}`);
-      if (el) {
-        const offset = 15; // 画面上端からの余白
-        const elementPosition = el.getBoundingClientRect().top + window.scrollY;
-        const offsetPosition = elementPosition - offset;
+      // 1. まず展開する (下に広がる)
+      setExpandedId(id);
 
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        });
+      // 2. ほんの少し待ってから、タイトルを一番上に合わせるスクロールを開始
+      setTimeout(() => {
+        const el = document.getElementById(`word-card-${id}`);
+        if (el) {
+          const headerOffset = 70; // ヘッダー分の高さ
+          const elementTop = el.getBoundingClientRect().top + window.scrollY;
+          const targetPosition = elementTop - headerOffset;
 
-        // スクロールアニメーションの時間(約300ms)待ってから展開
-        setTimeout(() => {
-          setExpandedId(id);
-          // 展開アニメーションが終わる頃にロック解除
-          setTimeout(() => { isInteracting.current = false; }, 400);
-        }, 300);
-      } else {
-        // 万が一要素が見つからない場合は即時展開
-        setExpandedId(id);
-        isInteracting.current = false;
-      }
+          window.scrollTo({
+            top: targetPosition,
+            behavior: 'smooth'
+          });
+        }
+        // アニメーション完了後にロック解除
+        setTimeout(() => { isInteracting.current = false; }, 600);
+      }, 50); // 即時ではなく50ms待つことでガタつきを防ぐ
     }
   };
 
@@ -234,6 +227,7 @@ export default function ClientPage({ words, posts }) {
   const startTest = (type, value) => { let candidates = type === 'genre' ? (value === 'ALL' ? safeWords : safeWords.filter(w=>w.genre===value)) : (value === 'ALL' ? safeWords : safeWords.filter(w=>w.difficulty===value)); const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10); if (!selected.length) return alert("該当なし"); setTestQuestions(selected); setCurrentQuestionIndex(0); setIsFlipped(false); setSwipeX(0); setTestPhase('playing'); };
   const nextCard = (e) => { e?.stopPropagation(); if (currentQuestionIndex < testQuestions.length - 1) { setSwipeX(-500); setTimeout(() => { setIsFlipped(false); setCurrentQuestionIndex(prev => prev + 1); setIsDragging(true); setSwipeX(500); setTimeout(() => { setIsDragging(false); setSwipeX(0); }, 50); }, 200); } else { setTestPhase('result'); } };
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
+
 
   // --- HOME ---
   const HomeView = () => (
