@@ -109,7 +109,6 @@ export default function ClientPage({ words, posts }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // スワイプ用 (Test Mode)
   const touchStartX = useRef(null);
   const touchCurrentX = useRef(null);
   const [swipeX, setSwipeX] = useState(0);
@@ -119,7 +118,8 @@ export default function ClientPage({ words, posts }) {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   
   const audioRef = useRef(null);
-  const lastScrollTopRef = useRef(0);
+  // インタラクションロック：開閉動作中はスクロール制御を止める
+  const isInteracting = useRef(false);
   
   const GENRES = ["ALL", "全般", "打撃・走塁", "投球・守備", "成績・契約", "表現"];
   const LEVELS = ["ALL", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
@@ -130,42 +130,64 @@ export default function ClientPage({ words, posts }) {
     return () => { document.body.style.overflow = ''; };
   }, [blogModalPost, videoModalItem]);
 
-  // ★自動スクロール (開いた時だけ動く)
-  useEffect(() => {
-    if (expandedId && activeTab === 'list') {
-      setTimeout(() => {
-        const el = document.getElementById(`word-card-${expandedId}`);
-        if (el) {
-          // ヘッダーの高さ分(約80px)を引いて、見やすい位置へスムーズスクロール
-          const offset = 80;
-          const bodyRect = document.body.getBoundingClientRect().top;
-          const elementRect = el.getBoundingClientRect().top;
-          const elementPosition = elementRect - bodyRect;
-          const offsetPosition = elementPosition - offset;
-
-          window.scrollTo({
-            top: offsetPosition,
-            behavior: 'smooth'
-          });
-        }
-      }, 150); // 展開アニメーションを少し待つ
-    }
-  }, [expandedId, activeTab]);
-
+  // ★スクロール制御 (Header)
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollTop = window.scrollY;
       setShowScrollBtns(currentScrollTop > 100);
+      
+      // インタラクション中はヘッダーの出し入れをしない（ガタつき防止）
+      if (isInteracting.current) return;
+
       if (activeTab === 'list') {
-        if (currentScrollTop < 10) setIsHeaderVisible(true);
-        else if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 60) setIsHeaderVisible(false);
-        else if (currentScrollTop < lastScrollTopRef.current) setIsHeaderVisible(true);
+        // 上まで戻ったらヘッダーを出す
+        if (currentScrollTop < 10) {
+          setIsHeaderVisible(true);
+        } 
+        // それ以外で少しでも下にスクロールしたら隠す (一度隠れたら基本隠したまま)
+        else if (currentScrollTop > 50) {
+          setIsHeaderVisible(false);
+        }
       }
-      lastScrollTopRef.current = currentScrollTop;
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [activeTab]);
+
+  // ★単語カードの開閉ロジック
+  const toggleExpand = (id) => {
+    isInteracting.current = true; // ロック開始
+
+    if (expandedId === id) {
+      // 閉じる場合
+      setExpandedId(null);
+      setTimeout(() => { isInteracting.current = false; }, 300);
+    } else {
+      // 開く場合：まずはスクロールさせる
+      const el = document.getElementById(`word-card-${id}`);
+      if (el) {
+        const offset = 15; // 画面上端からの余白
+        const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+        const offsetPosition = elementPosition - offset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+
+        // スクロールアニメーションの時間(約300ms)待ってから展開
+        setTimeout(() => {
+          setExpandedId(id);
+          // 展開アニメーションが終わる頃にロック解除
+          setTimeout(() => { isInteracting.current = false; }, 400);
+        }, 300);
+      } else {
+        // 万が一要素が見つからない場合は即時展開
+        setExpandedId(id);
+        isInteracting.current = false;
+      }
+    }
+  };
 
   const toggleHeader = () => setIsHeaderVisible(!isHeaderVisible);
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -205,42 +227,13 @@ export default function ClientPage({ words, posts }) {
     });
   }, [searchQuery, filterMode, selectedGenre, selectedLevel, safeWords]);
 
-  // Test mode swipe logic (Ref based)
-  const onTouchStart = (e) => {
-    touchStartX.current = e.targetTouches[0].clientX;
-    touchCurrentX.current = e.targetTouches[0].clientX;
-    setIsDragging(true);
-  };
-  const onTouchMove = (e) => {
-    if (touchStartX.current === null) return;
-    touchCurrentX.current = e.targetTouches[0].clientX;
-    setSwipeX(touchCurrentX.current - touchStartX.current);
-  };
-  const onTouchEnd = () => {
-    if (touchStartX.current === null || touchCurrentX.current === null) { setIsDragging(false); setSwipeX(0); return; }
-    const diff = touchCurrentX.current - touchStartX.current;
-    setIsDragging(false);
-    if (diff < -80) nextCard(); 
-    else if (diff > 80) setSwipeX(0); 
-    else { if (Math.abs(diff) < 5) setIsFlipped(!isFlipped); setSwipeX(0); }
-    touchStartX.current = null; touchCurrentX.current = null;
-  };
-
-  const startTest = (type, value) => {
-    let candidates = type === 'genre' ? (value === 'ALL' ? safeWords : safeWords.filter(w=>w.genre===value)) : (value === 'ALL' ? safeWords : safeWords.filter(w=>w.difficulty===value));
-    const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10);
-    if (!selected.length) return alert("該当なし");
-    setTestQuestions(selected); setCurrentQuestionIndex(0); setIsFlipped(false); setSwipeX(0); setTestPhase('playing');
-  };
-  const nextCard = (e) => {
-    e?.stopPropagation();
-    if (currentQuestionIndex < testQuestions.length - 1) {
-      setSwipeX(-500);
-      setTimeout(() => { setIsFlipped(false); setCurrentQuestionIndex(prev => prev + 1); setIsDragging(true); setSwipeX(500); setTimeout(() => { setIsDragging(false); setSwipeX(0); }, 50); }, 200);
-    } else { setTestPhase('result'); }
-  };
+  // Test Mode Logic
+  const onTouchStart = (e) => { touchStartX.current = e.targetTouches[0].clientX; touchCurrentX.current = e.targetTouches[0].clientX; setIsDragging(true); };
+  const onTouchMove = (e) => { if (touchStartX.current === null) return; touchCurrentX.current = e.targetTouches[0].clientX; setSwipeX(touchCurrentX.current - touchStartX.current); };
+  const onTouchEnd = () => { if (touchStartX.current === null || touchCurrentX.current === null) { setIsDragging(false); setSwipeX(0); return; } const diff = touchCurrentX.current - touchStartX.current; setIsDragging(false); if (diff < -80) nextCard(); else if (diff > 80) setSwipeX(0); else { if (Math.abs(diff) < 5) setIsFlipped(!isFlipped); setSwipeX(0); } touchStartX.current = null; touchCurrentX.current = null; };
+  const startTest = (type, value) => { let candidates = type === 'genre' ? (value === 'ALL' ? safeWords : safeWords.filter(w=>w.genre===value)) : (value === 'ALL' ? safeWords : safeWords.filter(w=>w.difficulty===value)); const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10); if (!selected.length) return alert("該当なし"); setTestQuestions(selected); setCurrentQuestionIndex(0); setIsFlipped(false); setSwipeX(0); setTestPhase('playing'); };
+  const nextCard = (e) => { e?.stopPropagation(); if (currentQuestionIndex < testQuestions.length - 1) { setSwipeX(-500); setTimeout(() => { setIsFlipped(false); setCurrentQuestionIndex(prev => prev + 1); setIsDragging(true); setSwipeX(500); setTimeout(() => { setIsDragging(false); setSwipeX(0); }, 50); }, 200); } else { setTestPhase('result'); } };
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
-
 
   // --- HOME ---
   const HomeView = () => (
@@ -289,7 +282,7 @@ export default function ClientPage({ words, posts }) {
             {filteredWords.length === 0 ? <div className="text-center py-20 text-gray-400">見つかりませんでした</div> : 
               filteredWords.map((item) => (
                 <div id={`word-card-${item.id}`} key={item.id} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
-                  <div className="p-4 flex justify-between items-start cursor-pointer" onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}>
+                  <div className="p-4 flex justify-between items-start cursor-pointer" onClick={() => toggleExpand(item.id)}>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1"><h3 className="text-lg font-extrabold text-slate-800 leading-tight">{item.word}</h3>{item.audioUrl && <button onClick={(e) => playAudio(e, item.audioUrl)} className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 active:scale-95"><SpeakerIcon /></button>}</div>
                       <div className="flex items-center gap-3 text-xs text-gray-400 font-mono"><span style={IPA_FONT_STYLE}>{item.ipa}</span><span className={`px-1.5 py-0.5 rounded text-[10px] border ${String(item.difficulty || '').includes('1') ? 'bg-green-50 text-green-600 border-green-100' : String(item.difficulty || '').includes('5') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>{item.difficulty}</span></div>
