@@ -20,7 +20,6 @@ const RefreshIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" he
 const FlipIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 2.1l4 4-4 4"></path><path d="M3 12.2v-2a4 4 0 0 1 4-4h12.8M7 21.9l-4-4 4-4"></path><path d="M21 11.8v2a4 4 0 0 1-4 4H4.2"></path></svg>);
 const NextArrowIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>);
 const HandSwipeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path></svg>);
-const GestureIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/60"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M12 19l-7-7 7 7" transform="rotate(180 12 19)"/><path d="M19 12H5"/></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
@@ -101,9 +100,7 @@ export default function ClientPage({ words, posts }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLargeText, setIsLargeText] = useState(false);
   
-  // ★ポップアップ詳細用State
-  const [selectedWord, setSelectedWord] = useState(null); // IDではなくオブジェクト全体を持つか、IDから検索
-  
+  const [expandedId, setExpandedId] = useState(null);
   const [videoModalItem, setVideoModalItem] = useState(null);
   const [blogModalPost, setBlogModalPost] = useState(null);
 
@@ -112,11 +109,10 @@ export default function ClientPage({ words, posts }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // スワイプ用 (Test & Popup共通)
+  // スワイプ用 (Test Mode)
   const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
+  const touchCurrentX = useRef(null);
   const [swipeX, setSwipeX] = useState(0);
-  const [swipeY, setSwipeY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
   const [showScrollBtns, setShowScrollBtns] = useState(false);
@@ -128,12 +124,33 @@ export default function ClientPage({ words, posts }) {
   const GENRES = ["ALL", "全般", "打撃・走塁", "投球・守備", "成績・契約", "表現"];
   const LEVELS = ["ALL", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
 
-  // 背景固定用
   useEffect(() => {
-    if (blogModalPost || videoModalItem || selectedWord) document.body.style.overflow = 'hidden';
+    if (blogModalPost || videoModalItem) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
-  }, [blogModalPost, videoModalItem, selectedWord]);
+  }, [blogModalPost, videoModalItem]);
+
+  // ★自動スクロール (開いた時だけ動く)
+  useEffect(() => {
+    if (expandedId && activeTab === 'list') {
+      setTimeout(() => {
+        const el = document.getElementById(`word-card-${expandedId}`);
+        if (el) {
+          // ヘッダーの高さ分(約80px)を引いて、見やすい位置へスムーズスクロール
+          const offset = 80;
+          const bodyRect = document.body.getBoundingClientRect().top;
+          const elementRect = el.getBoundingClientRect().top;
+          const elementPosition = elementRect - bodyRect;
+          const offsetPosition = elementPosition - offset;
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        }
+      }, 150); // 展開アニメーションを少し待つ
+    }
+  }, [expandedId, activeTab]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -188,86 +205,39 @@ export default function ClientPage({ words, posts }) {
     });
   }, [searchQuery, filterMode, selectedGenre, selectedLevel, safeWords]);
 
-  // ★単語ポップアップのナビゲーション処理
-  const handleWordNav = (direction) => {
-    if (!selectedWord) return;
-    const currentIndex = filteredWords.findIndex(w => w.id === selectedWord.id);
-    if (currentIndex === -1) return;
-
-    let nextIndex = currentIndex + direction;
-    if (nextIndex >= 0 && nextIndex < filteredWords.length) {
-      // 少しアニメーションっぽく切り替えるためのリセット（簡易）
-      setSwipeY(0);
-      setSwipeX(0);
-      setSelectedWord(filteredWords[nextIndex]);
-    } else {
-      // 端に到達したらバウンドさせて戻す
-      setSwipeY(0);
-    }
-  };
-
-  // ★ポップアップ用スワイプ処理
-  const onPopupTouchStart = (e) => {
+  // Test mode swipe logic (Ref based)
+  const onTouchStart = (e) => {
     touchStartX.current = e.targetTouches[0].clientX;
-    touchStartY.current = e.targetTouches[0].clientY;
+    touchCurrentX.current = e.targetTouches[0].clientX;
     setIsDragging(true);
   };
-
-  const onPopupTouchMove = (e) => {
+  const onTouchMove = (e) => {
     if (touchStartX.current === null) return;
-    const diffX = e.targetTouches[0].clientX - touchStartX.current;
-    const diffY = e.targetTouches[0].clientY - touchStartY.current;
-    
-    // 横移動が大きい場合は縦移動を無視（またはその逆）して動きを安定させる
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-        setSwipeX(diffX);
-        setSwipeY(0);
-    } else {
-        setSwipeY(diffY);
-        setSwipeX(0);
-    }
+    touchCurrentX.current = e.targetTouches[0].clientX;
+    setSwipeX(touchCurrentX.current - touchStartX.current);
   };
-
-  const onPopupTouchEnd = () => {
+  const onTouchEnd = () => {
+    if (touchStartX.current === null || touchCurrentX.current === null) { setIsDragging(false); setSwipeX(0); return; }
+    const diff = touchCurrentX.current - touchStartX.current;
     setIsDragging(false);
-    const threshold = 80;
-
-    if (Math.abs(swipeX) > threshold) {
-        // 横スワイプ -> 閉じる
-        setSelectedWord(null);
-    } else if (swipeY < -threshold) {
-        // 上スワイプ -> 次へ
-        handleWordNav(1);
-    } else if (swipeY > threshold) {
-        // 下スワイプ -> 前へ
-        handleWordNav(-1);
-    }
-    
-    // リセット
-    setSwipeX(0);
-    setSwipeY(0);
-    touchStartX.current = null;
-    touchStartY.current = null;
+    if (diff < -80) nextCard(); 
+    else if (diff > 80) setSwipeX(0); 
+    else { if (Math.abs(diff) < 5) setIsFlipped(!isFlipped); setSwipeX(0); }
+    touchStartX.current = null; touchCurrentX.current = null;
   };
 
-  // Test mode swipe logic (simplified reuse)
-  const onTestTouchStart = (e) => { touchStartX.current = e.targetTouches[0].clientX; setIsDragging(true); };
-  const onTestTouchMove = (e) => { if(touchStartX.current){ setSwipeX(e.targetTouches[0].clientX - touchStartX.current); } };
-  const onTestTouchEnd = () => { 
-    setIsDragging(false);
-    if (swipeX < -60) { // Next
-        if (currentQuestionIndex < testQuestions.length - 1) {
-            setSwipeX(-500);
-            setTimeout(() => { setIsFlipped(false); setCurrentQuestionIndex(prev => prev + 1); setIsDragging(true); setSwipeX(500); setTimeout(() => { setIsDragging(false); setSwipeX(0); }, 50); }, 200);
-        } else { setTestPhase('result'); }
-    } else if (Math.abs(swipeX) < 5) { setIsFlipped(!isFlipped); }
-    setSwipeX(0); touchStartX.current = null;
-  };
   const startTest = (type, value) => {
     let candidates = type === 'genre' ? (value === 'ALL' ? safeWords : safeWords.filter(w=>w.genre===value)) : (value === 'ALL' ? safeWords : safeWords.filter(w=>w.difficulty===value));
     const selected = [...candidates].sort(() => 0.5 - Math.random()).slice(0, 10);
     if (!selected.length) return alert("該当なし");
     setTestQuestions(selected); setCurrentQuestionIndex(0); setIsFlipped(false); setSwipeX(0); setTestPhase('playing');
+  };
+  const nextCard = (e) => {
+    e?.stopPropagation();
+    if (currentQuestionIndex < testQuestions.length - 1) {
+      setSwipeX(-500);
+      setTimeout(() => { setIsFlipped(false); setCurrentQuestionIndex(prev => prev + 1); setIsDragging(true); setSwipeX(500); setTimeout(() => { setIsDragging(false); setSwipeX(0); }, 50); }, 200);
+    } else { setTestPhase('result'); }
   };
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
 
@@ -318,71 +288,31 @@ export default function ClientPage({ words, posts }) {
           <div className="p-3 space-y-3 pb-24">
             {filteredWords.length === 0 ? <div className="text-center py-20 text-gray-400">見つかりませんでした</div> : 
               filteredWords.map((item) => (
-                // ★クリックでポップアップ表示
-                <div key={item.id} onClick={() => setSelectedWord(item)} className="bg-white rounded-xl border border-gray-200 shadow-sm active:scale-[0.99] overflow-hidden transition-all duration-200 p-4 flex justify-between items-start cursor-pointer hover:border-blue-400">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1"><h3 className="text-lg font-extrabold text-slate-800 leading-tight">{item.word}</h3></div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400 font-mono"><span style={IPA_FONT_STYLE}>{item.ipa}</span><span className={`px-1.5 py-0.5 rounded text-[10px] border ${String(item.difficulty || '').includes('1') ? 'bg-green-50 text-green-600 border-green-100' : String(item.difficulty || '').includes('5') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>{item.difficulty}</span></div>
+                <div id={`word-card-${item.id}`} key={item.id} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
+                  <div className="p-4 flex justify-between items-start cursor-pointer" onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1"><h3 className="text-lg font-extrabold text-slate-800 leading-tight">{item.word}</h3>{item.audioUrl && <button onClick={(e) => playAudio(e, item.audioUrl)} className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 active:scale-95"><SpeakerIcon /></button>}</div>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 font-mono"><span style={IPA_FONT_STYLE}>{item.ipa}</span><span className={`px-1.5 py-0.5 rounded text-[10px] border ${String(item.difficulty || '').includes('1') ? 'bg-green-50 text-green-600 border-green-100' : String(item.difficulty || '').includes('5') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>{item.difficulty}</span></div>
+                    </div>
+                    <div className="text-sm font-bold text-gray-600 text-right max-w-[40%] leading-snug">{item.meaning}</div>
                   </div>
-                  <div className="text-sm font-bold text-gray-600 text-right max-w-[40%] leading-snug">{item.meaning}</div>
+                  <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${expandedId === item.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                    <div className="overflow-hidden">
+                      <div className="bg-slate-50 border-t border-gray-100 px-5 py-4 text-sm space-y-3">
+                        <DetailRow label="カタカナ" content={item.katakana} />
+                        {item.example && (<div className="pt-1"><span className="text-[10px] font-bold text-blue-600 block mb-1">EXAMPLE</span><div className="bg-white border-l-2 border-blue-200 pl-3 py-3 space-y-2"><div className="flex items-start gap-3"><span className="flex-1 text-slate-700 italic font-medium text-base">"{item.example}"</span>{item.exampleAudioUrl && <button onClick={(e) => playAudio(e, item.exampleAudioUrl)} className="flex-shrink-0 w-10 h-10 bg-blue-100 text-blue-600 rounded-full active:scale-95 ml-1 flex items-center justify-center"><PlayIcon /></button>}</div>{item.exampleTranslation && <div className="text-xs text-gray-500 pl-1 border-t border-gray-100 pt-2">{item.exampleTranslation}</div>}</div></div>)}
+                        {item.memo && <DetailRow label="MEMO" content={item.memo} />}
+                        {item.videoUrl && <div className="pt-2"><button onClick={(e) => { e.stopPropagation(); setVideoModalItem(item); }} className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-bold rounded-full shadow-md active:scale-[0.95]"><VideoIcon /><span>動画を視聴</span></button></div>}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))
             }
           </div>
         )}
         
-        {/* ★単語ポップアップ (スワイプ機能付き) */}
-        {selectedWord && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn" onClick={() => setSelectedWord(null)}>
-            <div 
-              className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" 
-              onClick={(e) => e.stopPropagation()}
-              onTouchStart={onPopupTouchStart}
-              onTouchMove={onPopupTouchMove}
-              onTouchEnd={onPopupTouchEnd}
-              style={{
-                transform: `translate(${swipeX}px, ${swipeY}px) rotate(${swipeX * 0.05}deg)`,
-                transition: isDragging ? 'none' : 'transform 0.3s ease-out'
-              }}
-            >
-              {/* ヘッダー部分 */}
-              <div className="bg-slate-50 border-b border-gray-100 p-6 text-center relative">
-                <div className="absolute top-2 left-0 w-full flex justify-center opacity-30"><div className="w-12 h-1 bg-gray-300 rounded-full"></div></div>
-                <h2 className="text-3xl font-black text-slate-800 mb-2 leading-tight">{selectedWord.word}</h2>
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <span className="font-mono text-sm text-gray-500" style={IPA_FONT_STYLE}>{selectedWord.ipa}</span>
-                  {selectedWord.audioUrl && <button onClick={(e) => playAudio(e, selectedWord.audioUrl)} className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center active:scale-90"><SpeakerIcon /></button>}
-                </div>
-                <p className="text-lg font-bold text-blue-600">{selectedWord.meaning}</p>
-              </div>
-              
-              {/* コンテンツ部分 (スクロール可能) */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-white">
-                <DetailRow label="カタカナ" content={selectedWord.katakana} />
-                {selectedWord.example && (
-                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                    <p className="text-[10px] font-bold text-blue-400 mb-1">EXAMPLE</p>
-                    <div className="flex items-start gap-2 mb-2">
-                      <p className="text-sm font-medium italic text-slate-700 flex-1">"{selectedWord.example}"</p>
-                      {selectedWord.exampleAudioUrl && <button onClick={(e) => playAudio(e, selectedWord.exampleAudioUrl)} className="flex-shrink-0 w-8 h-8 bg-white border border-blue-100 text-blue-500 rounded-full flex items-center justify-center shadow-sm active:scale-90"><PlayIcon /></button>}
-                    </div>
-                    {selectedWord.exampleTranslation && <p className="text-xs text-slate-500 border-t border-blue-100 pt-2">{selectedWord.exampleTranslation}</p>}
-                  </div>
-                )}
-                {selectedWord.memo && <DetailRow label="MEMO" content={selectedWord.memo} />}
-                {selectedWord.videoUrl && <button onClick={() => setVideoModalItem(selectedWord)} className="w-full py-3 bg-slate-800 text-white rounded-xl font-bold text-sm shadow-md active:scale-95 flex items-center justify-center gap-2 mt-2"><VideoIcon />動画で確認する</button>}
-              </div>
-
-              {/* ガイド */}
-              <div className="bg-gray-50 border-t border-gray-100 p-2 flex justify-between text-[9px] font-bold text-gray-300 px-6 uppercase tracking-widest">
-                <span>← Swipe Close →</span>
-                <span>↕ Swipe Nav</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ... (テストモード・コラム・動画モーダル・スクロールボタンなどは変更なし) ... */}
+        {/* Test Mode */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
@@ -394,13 +324,13 @@ export default function ClientPage({ words, posts }) {
             ) : testPhase === 'playing' ? (
               <div className="flex-1 flex flex-col max-w-md mx-auto w-full relative py-4 items-center">
                 <div className="w-full mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span>Question {currentQuestionIndex + 1}</span><span>{testQuestions.length}</span></div><div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div></div>
-                <div className="relative w-full aspect-square perspective-1000 cursor-pointer touch-pan-y" onTouchStart={onTestTouchStart} onTouchMove={onTestTouchMove} onTouchEnd={onTestTouchEnd} onClick={() => setIsFlipped(!isFlipped)}>
+                <div className="relative w-full aspect-square perspective-1000 cursor-pointer touch-pan-y" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onClick={() => setIsFlipped(!isFlipped)}>
                   <div className={`relative w-full h-full transform-style-3d`} style={{ transition: isDragging ? 'none' : 'transform 0.3s ease', transform: `translateX(${swipeX}px) rotate(${swipeX * 0.05}deg) ${isFlipped ? 'rotateY(180deg)' : ''}` }}>
                     <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100"><span className="text-xs font-bold text-blue-400 tracking-widest mb-4">タップして答えを見る</span><h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight break-words max-w-full">{testQuestions[currentQuestionIndex].word}</h3><div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>{testQuestions[currentQuestionIndex].audioUrl && <button onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)} className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm border border-blue-100 active:scale-90"><SpeakerIcon /></button>}</div>
                     <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white text-slate-800 flex flex-col items-center justify-center p-8 text-center rounded-3xl shadow-xl border-2 border-slate-100 overflow-hidden relative"><div className="absolute inset-0 flex items-center justify-center p-12 z-0"><DiamondBgIcon /></div><div className="w-full h-full overflow-y-auto flex flex-col items-center justify-center scrollbar-hide relative z-10"><span className="text-xs font-bold text-blue-500 mb-4 tracking-widest">ANSWER</span><div className="text-2xl font-black mb-6 leading-snug break-words max-w-full">{testQuestions[currentQuestionIndex].meaning}</div>{testQuestions[currentQuestionIndex].example && (<div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 w-full text-left shadow-sm"><p className="text-sm font-medium italic text-slate-700 mb-2">"{testQuestions[currentQuestionIndex].example}"</p>{testQuestions[currentQuestionIndex].exampleTranslation && <p className="text-xs text-slate-500 border-t border-blue-100 pt-2">{testQuestions[currentQuestionIndex].exampleTranslation}</p>}</div>)}</div></div>
                   </div>
                 </div>
-                <div className="mt-8 w-full flex items-center justify-center gap-6"><button onClick={() => setIsFlipped(!isFlipped)} className="flex flex-col items-center gap-1 text-slate-400 active:text-blue-600 transition-colors"><div className="w-12 h-12 rounded-full bg-white border-2 border-slate-100 shadow-sm flex items-center justify-center active:scale-95 transition-transform"><FlipIcon /></div><span className="text-[10px] font-bold tracking-wider">FLIP</span></button><div className="h-8 w-[1px] bg-slate-200"></div><button onClick={() => onTestTouchEnd({ targetTouches: [], current: -100 })} className="flex flex-col items-center gap-1 text-blue-600 transition-colors"><div className="w-16 h-16 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200 flex items-center justify-center active:scale-95 transition-transform"><NextArrowIcon /></div><span className="text-[10px] font-bold tracking-wider">NEXT</span></button></div>
+                <div className="mt-8 w-full flex items-center justify-center gap-6"><button onClick={() => setIsFlipped(!isFlipped)} className="flex flex-col items-center gap-1 text-slate-400 active:text-blue-600 transition-colors"><div className="w-12 h-12 rounded-full bg-white border-2 border-slate-100 shadow-sm flex items-center justify-center active:scale-95 transition-transform"><FlipIcon /></div><span className="text-[10px] font-bold tracking-wider">FLIP</span></button><div className="h-8 w-[1px] bg-slate-200"></div><button onClick={nextCard} className="flex flex-col items-center gap-1 text-blue-600 transition-colors"><div className="w-16 h-16 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200 flex items-center justify-center active:scale-95 transition-transform"><NextArrowIcon /></div><span className="text-[10px] font-bold tracking-wider">NEXT</span></button></div>
                 <div className="mt-6 flex items-center gap-2 text-gray-400 animate-pulse"><HandSwipeIcon /><span className="text-[10px] font-bold">左へスワイプして次へ</span></div>
               </div>
             ) : (
