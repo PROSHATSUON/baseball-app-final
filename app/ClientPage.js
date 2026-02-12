@@ -16,6 +16,9 @@ const VideoIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" heig
 const CategoryIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>);
 const LevelIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>);
 const TextSizeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>);
+const RefreshIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>);
+const FlipIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 2.1l4 4-4 4"></path><path d="M3 12.2v-2a4 4 0 0 1 4-4h12.8M7 21.9l-4-4 4-4"></path><path d="M21 11.8v2a4 4 0 0 1-4 4H4.2"></path></svg>);
+const NextArrowIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
@@ -121,13 +124,16 @@ export default function ClientPage({ words, posts }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // スワイプ用 state
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
   const [showScrollBtns, setShowScrollBtns] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   
   const audioRef = useRef(null);
   const lastScrollTopRef = useRef(0);
   
-  // ★ジャンル順序変更：ALL -> 全般 -> 打撃 -> 投球 -> 成績 -> 表現
   const GENRES = ["ALL", "全般", "打撃・走塁", "投球・守備", "成績・契約", "表現"];
   const LEVELS = ["ALL", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
 
@@ -207,13 +213,29 @@ export default function ClientPage({ words, posts }) {
   };
 
   const nextCard = (e) => {
-    e.stopPropagation();
+    e?.stopPropagation();
     if (currentQuestionIndex < testQuestions.length - 1) {
       setIsFlipped(false);
-      setTimeout(() => setCurrentQuestionIndex(prev => prev + 1), 150);
+      setTimeout(() => {
+        setCurrentQuestionIndex(prev => prev + 1);
+        setTouchStart(null);
+        setTouchEnd(null);
+      }, 150);
     } else setTestPhase('result');
   };
+
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
+
+  // スワイプ検出ロジック
+  const minSwipeDistance = 50; 
+  const onTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
+  const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    if (isLeftSwipe) nextCard(); 
+  };
 
   const filteredWords = useMemo(() => {
     return safeWords.filter((item) => {
@@ -282,7 +304,6 @@ export default function ClientPage({ words, posts }) {
           </button>
         </div>
 
-        {/* 文字サイズ変更ボタン */}
         <div className="flex justify-center mt-4">
           <button 
             onClick={() => setIsLargeText(!isLargeText)} 
@@ -433,13 +454,19 @@ export default function ClientPage({ words, posts }) {
                    <div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span>Question {currentQuestionIndex + 1}</span><span>{testQuestions.length}</span></div>
                    <div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
                 </div>
-                <div className="mb-6 w-full">
-                  <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">{currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}</button>
-                </div>
-                <div className="relative w-full aspect-square perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
+                
+                {/* スワイプ対応カードコンテナ */}
+                <div 
+                  className="relative w-full aspect-square perspective-1000 cursor-pointer touch-pan-y" 
+                  onClick={() => setIsFlipped(!isFlipped)}
+                  onTouchStart={onTouchStart}
+                  onTouchMove={onTouchMove}
+                  onTouchEnd={onTouchEnd}
+                >
                   <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                     <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100">
-                      <span className="text-xs font-bold text-blue-500 tracking-widest mb-4">TAP TO FLIP</span>
+                      {/* ★変更箇所: 日本語化 */}
+                      <span className="text-xs font-bold text-blue-400 tracking-widest mb-4">タップして答えを見る</span>
                       <h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight break-words max-w-full">{testQuestions[currentQuestionIndex].word}</h3>
                       <div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
                       {testQuestions[currentQuestionIndex].audioUrl && <button onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)} className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm border border-blue-100 active:scale-90"><SpeakerIcon /></button>}
@@ -459,13 +486,29 @@ export default function ClientPage({ words, posts }) {
                     </div>
                   </div>
                 </div>
+
+                {/* 新しいコントロールバー (カードの下) */}
+                <div className="mt-8 w-full flex items-center justify-center gap-6">
+                  <button onClick={() => setIsFlipped(!isFlipped)} className="flex flex-col items-center gap-1 text-slate-400 active:text-blue-600 transition-colors">
+                    <div className="w-12 h-12 rounded-full bg-white border-2 border-slate-100 shadow-sm flex items-center justify-center active:scale-95 transition-transform"><FlipIcon /></div>
+                    <span className="text-[10px] font-bold tracking-wider">FLIP</span>
+                  </button>
+                  <div className="h-8 w-[1px] bg-slate-200"></div>
+                  <button onClick={nextCard} className="flex flex-col items-center gap-1 text-blue-600 transition-colors">
+                    <div className="w-16 h-16 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200 flex items-center justify-center active:scale-95 transition-transform"><NextArrowIcon /></div>
+                    <span className="text-[10px] font-bold tracking-wider">NEXT</span>
+                  </button>
+                </div>
+                
+                <div className="mt-4 text-[10px] text-gray-400 font-bold">SWIPE CARD LEFT TO SKIP</div>
+
               </div>
             ) : (
               <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 animate-fadeIn py-10">
                 <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mb-4 shadow-sm">🎉</div>
                 <h2 className="text-3xl font-black text-slate-800">Test Completed!</h2>
                 <div className="flex flex-col w-full max-w-xs gap-3">
-                  <button onClick={restartTest} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95">もう一度テストする</button>
+                  <button onClick={restartTest} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 flex items-center justify-center gap-2"><RefreshIcon />もう一度テストする</button>
                   <button onClick={() => setActiveTab('home')} className="text-gray-400 font-bold text-sm py-2">HOMEに戻る</button>
                 </div>
               </div>
