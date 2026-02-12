@@ -146,7 +146,7 @@ export default function ClientPage({ words, posts }) {
     return () => { document.body.style.overflow = ''; };
   }, [blogModalPost, videoModalItem]);
 
-  // ★自動スクロール機能を削除しました
+  // ★自動スクロールの useEffect を削除しました (これで勝手に動かなくなります)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -239,7 +239,7 @@ export default function ClientPage({ words, posts }) {
 
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
 
-  // スワイプ検出ロジック
+  // スワイプ検出ロジック (useRef版)
   const minSwipeDistance = 50; 
 
   const onTouchStart = (e) => {
@@ -424,15 +424,18 @@ export default function ClientPage({ words, posts }) {
 
       {/* メインエリア */}
       <div className="transition-all duration-500 ease-in-out" style={{ paddingTop: activeTab === 'home' ? '0px' : (activeTab === 'list' ? (isHeaderVisible ? '260px' : '60px') : '80px') }}>
-        {activeTab === 'home' && <HomeView />}
         
-        {/* 単語リスト */}
+        {/* === HOME画面 === */}
+        {activeTab === 'home' && <HomeView />}
+
+        {/* === 単語リスト (スムーズ展開・スクロールなし) === */}
         {activeTab === 'list' && (
           <div className="p-3 space-y-3 pb-24">
             {filteredWords.length === 0 ? <div className="text-center py-20 text-gray-400">見つかりませんでした</div> : 
               filteredWords.map((item) => (
-                <div key={item.id} onClick={() => setExpandedId(expandedId === item.id ? null : item.id)} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
-                  <div className="p-4 flex justify-between items-start">
+                <div key={item.id} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
+                  {/* ヘッダー部分 (タップで開閉) */}
+                  <div className="p-4 flex justify-between items-start cursor-pointer" onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-lg font-extrabold text-slate-800 leading-tight">{item.word}</h3>
@@ -447,31 +450,36 @@ export default function ClientPage({ words, posts }) {
                     </div>
                     <div className="text-sm font-bold text-gray-600 text-right max-w-[40%] leading-snug">{item.meaning}</div>
                   </div>
-                  {expandedId === item.id && (
-                    <div className="bg-slate-50 border-t border-gray-100 px-5 py-4 text-sm space-y-3 animate-fadeIn">
-                      <DetailRow label="カタカナ" content={item.katakana} />
-                      {item.example && (
-                        <div className="pt-1">
-                          <span className="text-[10px] font-bold text-blue-600 block mb-1">EXAMPLE</span>
-                          <div className="bg-white border-l-2 border-blue-200 pl-3 py-3 space-y-2">
-                            <div className="flex items-start gap-3">
-                              <span className="flex-1 text-slate-700 italic font-medium text-base">"{item.example}"</span>
-                              {item.exampleAudioUrl && <button onClick={(e) => playAudio(e, item.exampleAudioUrl)} className="flex-shrink-0 w-10 h-10 bg-blue-100 text-blue-600 rounded-full active:scale-95 ml-1 flex items-center justify-center"><PlayIcon /></button>}
+
+                  {/* ★詳細部分 (アニメーションで展開) */}
+                  <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${expandedId === item.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                    <div className="overflow-hidden">
+                      <div className="bg-slate-50 border-t border-gray-100 px-5 py-4 text-sm space-y-3">
+                        <DetailRow label="カタカナ" content={item.katakana} />
+                        {item.example && (
+                          <div className="pt-1">
+                            <span className="text-[10px] font-bold text-blue-600 block mb-1">EXAMPLE</span>
+                            <div className="bg-white border-l-2 border-blue-200 pl-3 py-3 space-y-2">
+                              <div className="flex items-start gap-3">
+                                <span className="flex-1 text-slate-700 italic font-medium text-base">"{item.example}"</span>
+                                {item.exampleAudioUrl && <button onClick={(e) => playAudio(e, item.exampleAudioUrl)} className="flex-shrink-0 w-10 h-10 bg-blue-100 text-blue-600 rounded-full active:scale-95 ml-1 flex items-center justify-center"><PlayIcon /></button>}
+                              </div>
+                              {item.exampleTranslation && <div className="text-xs text-gray-500 pl-1 border-t border-gray-100 pt-2">{item.exampleTranslation}</div>}
                             </div>
-                            {item.exampleTranslation && <div className="text-xs text-gray-500 pl-1 border-t border-gray-100 pt-2">{item.exampleTranslation}</div>}
                           </div>
-                        </div>
-                      )}
-                      {item.memo && <DetailRow label="MEMO" content={item.memo} />}
-                      {item.videoUrl && <div className="pt-2"><button onClick={(e) => { e.stopPropagation(); setVideoModalItem(item); }} className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-bold rounded-full shadow-md active:scale-[0.95]"><VideoIcon /><span>動画を視聴</span></button></div>}
+                        )}
+                        {item.memo && <DetailRow label="MEMO" content={item.memo} />}
+                        {item.videoUrl && <div className="pt-2"><button onClick={(e) => { e.stopPropagation(); setVideoModalItem(item); }} className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-bold rounded-full shadow-md active:scale-[0.95]"><VideoIcon /><span>動画を視聴</span></button></div>}
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               ))
             }
           </div>
         )}
 
+        {/* ... (テストモード以降は変更なし) ... */}
         {/* テストモード */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
@@ -500,31 +508,17 @@ export default function ClientPage({ words, posts }) {
                    <div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span>Question {currentQuestionIndex + 1}</span><span>{testQuestions.length}</span></div>
                    <div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
                 </div>
-                
-                {/* ★スワイプ対応カードコンテナ */}
-                <div 
-                  className="relative w-full aspect-square perspective-1000 cursor-pointer touch-pan-y" 
-                  // onClickの代わりにタッチエンドで判定
-                  onTouchStart={onTouchStart}
-                  onTouchMove={onTouchMove}
-                  onTouchEnd={onTouchEnd}
-                >
-                  <div 
-                    className={`relative w-full h-full transform-style-3d`} 
-                    style={{ 
-                      transition: isDragging ? 'none' : 'transform 0.3s ease',
-                      transform: `translateX(${swipeX}px) rotate(${swipeX * 0.05}deg) ${isFlipped ? 'rotateY(180deg)' : ''}`
-                    }}
-                  >
-                    {/* 表面 */}
+                <div className="mb-6 w-full">
+                  <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">{currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}</button>
+                </div>
+                <div className="relative w-full aspect-square perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
+                  <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                     <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100">
-                      {/* ★日本語化 */}
-                      <span className="text-xs font-bold text-blue-400 tracking-widest mb-4">タップして答えを見る</span>
+                      <span className="text-xs font-bold text-blue-500 tracking-widest mb-4">TAP TO FLIP</span>
                       <h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight break-words max-w-full">{testQuestions[currentQuestionIndex].word}</h3>
                       <div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
                       {testQuestions[currentQuestionIndex].audioUrl && <button onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)} className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm border border-blue-100 active:scale-90"><SpeakerIcon /></button>}
                     </div>
-                    {/* 裏面 */}
                     <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white text-slate-800 flex flex-col items-center justify-center p-8 text-center rounded-3xl shadow-xl border-2 border-slate-100 overflow-hidden relative">
                       <div className="absolute inset-0 flex items-center justify-center p-12 z-0"><DiamondBgIcon /></div>
                       <div className="w-full h-full overflow-y-auto flex flex-col items-center justify-center scrollbar-hide relative z-10">
@@ -540,35 +534,13 @@ export default function ClientPage({ words, posts }) {
                     </div>
                   </div>
                 </div>
-
-                {/* ★新しいコントロールバー (カードの下) */}
-                <div className="mt-8 w-full flex items-center justify-center gap-6">
-                  <button onClick={() => setIsFlipped(!isFlipped)} className="flex flex-col items-center gap-1 text-slate-400 active:text-blue-600 transition-colors">
-                    <div className="w-12 h-12 rounded-full bg-white border-2 border-slate-100 shadow-sm flex items-center justify-center active:scale-95 transition-transform"><FlipIcon /></div>
-                    <span className="text-[10px] font-bold tracking-wider">FLIP</span>
-                  </button>
-                  
-                  <div className="h-8 w-[1px] bg-slate-200"></div>
-
-                  <button onClick={nextCard} className="flex flex-col items-center gap-1 text-blue-600 transition-colors">
-                    <div className="w-16 h-16 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200 flex items-center justify-center active:scale-95 transition-transform"><NextArrowIcon /></div>
-                    <span className="text-[10px] font-bold tracking-wider">NEXT</span>
-                  </button>
-                </div>
-                
-                {/* スワイプガイド（アニメーション付き） */}
-                <div className="mt-6 flex items-center gap-2 text-gray-400 animate-pulse">
-                  <HandSwipeIcon />
-                  <span className="text-[10px] font-bold">左へスワイプして次へ</span>
-                </div>
-
               </div>
             ) : (
               <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 animate-fadeIn py-10">
                 <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mb-4 shadow-sm">🎉</div>
                 <h2 className="text-3xl font-black text-slate-800">Test Completed!</h2>
                 <div className="flex flex-col w-full max-w-xs gap-3">
-                  <button onClick={restartTest} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 flex items-center justify-center gap-2"><RefreshIcon />もう一度テストする</button>
+                  <button onClick={restartTest} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95">もう一度テストする</button>
                   <button onClick={() => setActiveTab('home')} className="text-gray-400 font-bold text-sm py-2">HOMEに戻る</button>
                 </div>
               </div>
