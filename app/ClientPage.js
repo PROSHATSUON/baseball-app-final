@@ -125,10 +125,13 @@ export default function ClientPage({ words, posts }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // ★スワイプ用 state
-  const [touchStart, setTouchStart] = useState(null);
-  const [swipeX, setSwipeX] = useState(0); // 現在の移動距離
-  const [isDragging, setIsDragging] = useState(false); // トランジション制御用
+  // ★スワイプ用 (useRefに変更)
+  const touchStartX = useRef(null);
+  const touchCurrentX = useRef(null);
+  
+  // 描画用のstate
+  const [swipeX, setSwipeX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const [showScrollBtns, setShowScrollBtns] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -241,37 +244,48 @@ export default function ClientPage({ words, posts }) {
 
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
 
-  // ★スワイプ検出ロジック
+  // ★スワイプ検出ロジック (useRef版)
   const minSwipeDistance = 50; 
+
   const onTouchStart = (e) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    touchStartX.current = e.targetTouches[0].clientX;
+    touchCurrentX.current = e.targetTouches[0].clientX; // 初期値セット
     setIsDragging(true); // 指で動かしている間はtransitionを無効にして追従性を良くする
   };
 
   const onTouchMove = (e) => {
-    if (!touchStart) return;
-    const currentX = e.targetTouches[0].clientX;
-    const diff = currentX - touchStart;
+    if (touchStartX.current === null) return;
+    touchCurrentX.current = e.targetTouches[0].clientX;
+    const diff = touchCurrentX.current - touchStartX.current;
     setSwipeX(diff);
-    setTouchEnd(currentX);
   };
 
   const onTouchEnd = () => {
-    setIsDragging(false); // 指を離したらアニメーション有効化
-    if (!touchStart) return;
+    if (touchStartX.current === null || touchCurrentX.current === null) {
+        setIsDragging(false);
+        setSwipeX(0);
+        return;
+    }
     
+    const diff = touchCurrentX.current - touchStartX.current;
+    setIsDragging(false); // 指を離したらアニメーション有効化
+
     // スワイプ判定
-    if (swipeX < -80) { // 左へ大きく動かしたら次へ
+    if (diff < -80) { // 左へ大きく動かしたら次へ
       nextCard();
-    } else if (swipeX > 80) { // 右へ動かした場合は今回は戻すだけ
+    } else if (diff > 80) { // 右へ動かした場合は今回は戻すだけ
       setSwipeX(0);
     } else {
       // 微小な動きはタップとみなす
-      if (Math.abs(swipeX) < 5) setIsFlipped(!isFlipped);
+      if (Math.abs(diff) < 5) {
+        setIsFlipped(prev => !prev);
+      }
       setSwipeX(0);
     }
-    setTouchStart(null);
+    
+    // リセット
+    touchStartX.current = null;
+    touchCurrentX.current = null;
   };
 
   const filteredWords = useMemo(() => {
@@ -495,7 +509,7 @@ export default function ClientPage({ words, posts }) {
                 {/* ★スワイプ対応カードコンテナ */}
                 <div 
                   className="relative w-full aspect-square perspective-1000 cursor-pointer touch-pan-y" 
-                  onClick={() => setIsFlipped(!isFlipped)}
+                  // onClickの代わりにタッチエンドで判定
                   onTouchStart={onTouchStart}
                   onTouchMove={onTouchMove}
                   onTouchEnd={onTouchEnd}
