@@ -19,17 +19,14 @@ const TextSizeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" h
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
-// --- ★太文字・改行対応ヘルパー（色ロジック削除版） ---
+// --- 太文字・改行対応ヘルパー ---
 const RichText = ({ textObj }) => {
   if (!textObj) return null;
-  // 万が一文字列が直接渡された場合
   if (typeof textObj === 'string') return <span className="whitespace-pre-wrap">{textObj}</span>;
 
-  // plain_text または content を取得
   const plain_text = textObj.plain_text || textObj.text?.content || "";
   if (!plain_text) return null;
 
-  // 太文字判定 (annotationsがない場合も考慮)
   const isBold = textObj.annotations?.bold;
   const href = textObj.href || textObj.text?.link?.url;
 
@@ -38,11 +35,10 @@ const RichText = ({ textObj }) => {
   return href ? <a href={href} target="_blank" rel="noreferrer" className="underline text-blue-500 hover:text-blue-700">{content}</a> : content;
 };
 
-// --- ★安全な詳細表示コンポーネント ---
+// --- 安全な詳細表示コンポーネント ---
 function DetailRow({ label, content }) {
   if (!content) return null;
 
-  // 配列（リッチテキスト）の場合
   if (Array.isArray(content)) {
     return (
       <div>
@@ -54,12 +50,10 @@ function DetailRow({ label, content }) {
     );
   }
 
-  // オブジェクトだが配列ではない場合（念のため文字列化して表示）
   if (typeof content === 'object') {
-    return null; // 表示できない形式として無視する
+    return null;
   }
 
-  // 通常の文字列・数値の場合
   return (
     <div>
       <span className="text-[10px] font-bold text-blue-600 uppercase block mb-0.5">{label}</span>
@@ -75,7 +69,6 @@ const RenderBlock = ({ block }) => {
   if (type === 'divider') return <hr className="my-6 border-gray-200" />;
   if (!value) return null;
 
-  // コラム用リッチテキスト処理
   const renderRichText = () => {
     if (value.rich_text && Array.isArray(value.rich_text)) {
       return value.rich_text.map((t, i) => <RichText key={i} textObj={t} />);
@@ -134,7 +127,8 @@ export default function ClientPage({ words, posts }) {
   const audioRef = useRef(null);
   const lastScrollTopRef = useRef(0);
   
-  const GENRES = ["ALL", "打撃・走塁", "投球・守備", "成績・契約", "実況", "SNS"];
+  // ★ジャンル更新
+  const GENRES = ["ALL", "打撃・走塁", "投球・守備", "成績・契約", "表現", "全般"];
   const LEVELS = ["ALL", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
 
   useEffect(() => {
@@ -556,7 +550,7 @@ export default function ClientPage({ words, posts }) {
         .aspect-video { aspect-ratio: 16 / 9; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         
-        /* ★特大文字モード設定（全体1.25倍 + 個別調整） */
+        /* 特大文字モード設定 */
         .large-text-mode { font-size: 125%; }
         .large-text-mode .text-[10px] { font-size: 0.85rem !important; line-height: 1.2rem !important; }
         .large-text-mode .text-xs { font-size: 1rem !important; line-height: 1.5rem !important; }
@@ -566,7 +560,6 @@ export default function ClientPage({ words, posts }) {
         .large-text-mode .text-xl { font-size: 1.75rem !important; line-height: 2.25rem !important; }
         .large-text-mode .text-2xl { font-size: 2rem !important; line-height: 2.5rem !important; }
         .large-text-mode .text-3xl { font-size: 2.5rem !important; line-height: 1.2 !important; }
-        /* レイアウト崩れ防止 */
         .large-text-mode button { min-height: 48px; } 
       `}</style>
     </div>
