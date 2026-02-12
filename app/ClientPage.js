@@ -19,6 +19,7 @@ const TextSizeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" h
 const RefreshIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>);
 const FlipIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 2.1l4 4-4 4"></path><path d="M3 12.2v-2a4 4 0 0 1 4-4h12.8M7 21.9l-4-4 4-4"></path><path d="M21 11.8v2a4 4 0 0 1-4 4H4.2"></path></svg>);
 const NextArrowIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>);
+const HandSwipeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path></svg>);
 
 const IPA_FONT_STYLE = { fontFamily: '"Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI Symbol", sans-serif' };
 
@@ -124,9 +125,10 @@ export default function ClientPage({ words, posts }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // スワイプ用 state
+  // ★スワイプ用 state
   const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
+  const [swipeX, setSwipeX] = useState(0); // 現在の移動距離
+  const [isDragging, setIsDragging] = useState(false);
 
   const [showScrollBtns, setShowScrollBtns] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -209,32 +211,55 @@ export default function ClientPage({ words, posts }) {
     setTestQuestions(selected);
     setCurrentQuestionIndex(0);
     setIsFlipped(false);
+    setSwipeX(0); // リセット
     setTestPhase('playing');
   };
 
   const nextCard = (e) => {
     e?.stopPropagation();
     if (currentQuestionIndex < testQuestions.length - 1) {
-      setIsFlipped(false);
+      setSwipeX(-500); // 画面外へアニメーション
       setTimeout(() => {
+        setIsFlipped(false);
         setCurrentQuestionIndex(prev => prev + 1);
-        setTouchStart(null);
-        setTouchEnd(null);
-      }, 150);
+        setSwipeX(0); // 新しいカードは中央から
+      }, 200);
     } else setTestPhase('result');
   };
 
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
 
-  // スワイプ検出ロジック
-  const minSwipeDistance = 50; 
-  const onTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
-  const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+  // ★リアルな動きのスワイプ検出ロジック
+  const onTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsDragging(true);
+  };
+
+  const onTouchMove = (e) => {
+    if (!touchStart) return;
+    const currentX = e.targetTouches[0].clientX;
+    const diff = currentX - touchStart;
+    setSwipeX(diff); // 指に合わせてカードを動かす
+  };
+
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    if (isLeftSwipe) nextCard(); 
+    setIsDragging(false);
+    if (!touchStart) return;
+    
+    // スワイプ判定 (左へ大きく動かしたら次へ)
+    if (swipeX < -80) { // 左へ80px以上動かしたら
+      nextCard();
+    } else if (swipeX > 80) {
+      // 右スワイプの動作（今回はリセットして元の位置に戻すだけ）
+      setSwipeX(0);
+    } else {
+      // 少ししか動かしてない場合は、タップとみなしてFlipする (クリック判定)
+      if (Math.abs(swipeX) < 5) {
+        setIsFlipped(!isFlipped);
+      }
+      setSwipeX(0); // 元の位置に戻る
+    }
+    setTouchStart(null);
   };
 
   const filteredWords = useMemo(() => {
@@ -455,7 +480,7 @@ export default function ClientPage({ words, posts }) {
                    <div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
                 </div>
                 
-                {/* スワイプ対応カードコンテナ */}
+                {/* ★スワイプ対応カードコンテナ */}
                 <div 
                   className="relative w-full aspect-square perspective-1000 cursor-pointer touch-pan-y" 
                   onClick={() => setIsFlipped(!isFlipped)}
@@ -463,14 +488,22 @@ export default function ClientPage({ words, posts }) {
                   onTouchMove={onTouchMove}
                   onTouchEnd={onTouchEnd}
                 >
-                  <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+                  <div 
+                    className={`relative w-full h-full transform-style-3d`} 
+                    style={{ 
+                      transition: isDragging ? 'none' : 'transform 0.3s ease',
+                      transform: `translateX(${swipeX}px) rotate(${swipeX * 0.05}deg) ${isFlipped ? 'rotateY(180deg)' : ''}`
+                    }}
+                  >
+                    {/* 表面 */}
                     <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100">
-                      {/* ★変更箇所: 日本語化 */}
+                      {/* ★日本語化 */}
                       <span className="text-xs font-bold text-blue-400 tracking-widest mb-4">タップして答えを見る</span>
                       <h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight break-words max-w-full">{testQuestions[currentQuestionIndex].word}</h3>
                       <div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
                       {testQuestions[currentQuestionIndex].audioUrl && <button onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)} className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm border border-blue-100 active:scale-90"><SpeakerIcon /></button>}
                     </div>
+                    {/* 裏面 */}
                     <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white text-slate-800 flex flex-col items-center justify-center p-8 text-center rounded-3xl shadow-xl border-2 border-slate-100 overflow-hidden relative">
                       <div className="absolute inset-0 flex items-center justify-center p-12 z-0"><DiamondBgIcon /></div>
                       <div className="w-full h-full overflow-y-auto flex flex-col items-center justify-center scrollbar-hide relative z-10">
@@ -487,20 +520,26 @@ export default function ClientPage({ words, posts }) {
                   </div>
                 </div>
 
-                {/* 新しいコントロールバー (カードの下) */}
+                {/* ★新しいコントロールバー (カードの下) */}
                 <div className="mt-8 w-full flex items-center justify-center gap-6">
                   <button onClick={() => setIsFlipped(!isFlipped)} className="flex flex-col items-center gap-1 text-slate-400 active:text-blue-600 transition-colors">
                     <div className="w-12 h-12 rounded-full bg-white border-2 border-slate-100 shadow-sm flex items-center justify-center active:scale-95 transition-transform"><FlipIcon /></div>
                     <span className="text-[10px] font-bold tracking-wider">FLIP</span>
                   </button>
+                  
                   <div className="h-8 w-[1px] bg-slate-200"></div>
+
                   <button onClick={nextCard} className="flex flex-col items-center gap-1 text-blue-600 transition-colors">
                     <div className="w-16 h-16 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200 flex items-center justify-center active:scale-95 transition-transform"><NextArrowIcon /></div>
                     <span className="text-[10px] font-bold tracking-wider">NEXT</span>
                   </button>
                 </div>
                 
-                <div className="mt-4 text-[10px] text-gray-400 font-bold">SWIPE CARD LEFT TO SKIP</div>
+                {/* スワイプガイド（アニメーション付き） */}
+                <div className="mt-6 flex items-center gap-2 text-gray-400 animate-pulse">
+                  <HandSwipeIcon />
+                  <span className="text-[10px] font-bold">左へスワイプして次へ</span>
+                </div>
 
               </div>
             ) : (
