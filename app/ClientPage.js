@@ -127,8 +127,8 @@ export default function ClientPage({ words, posts }) {
   const audioRef = useRef(null);
   const lastScrollTopRef = useRef(0);
   
-  // ★ジャンル更新
-  const GENRES = ["ALL", "打撃・走塁", "投球・守備", "成績・契約", "表現", "全般"];
+  // ★ジャンル順序変更：ALL -> 全般 -> 打撃 -> 投球 -> 成績 -> 表現
+  const GENRES = ["ALL", "全般", "打撃・走塁", "投球・守備", "成績・契約", "表現"];
   const LEVELS = ["ALL", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
 
   useEffect(() => {
