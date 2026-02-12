@@ -146,17 +146,7 @@ export default function ClientPage({ words, posts }) {
     return () => { document.body.style.overflow = ''; };
   }, [blogModalPost, videoModalItem]);
 
-  // ★自動スクロール機能 (単語展開時)
-  useEffect(() => {
-    if (expandedId && activeTab === 'list') {
-      const el = document.getElementById(`word-card-${expandedId}`);
-      if (el) {
-        // ヘッダーや少しの余白を考慮して、要素の上端から少しずらした位置へスクロール
-        const y = el.getBoundingClientRect().top + window.scrollY - 120;
-        window.scrollTo({ top: y, behavior: 'smooth' });
-      }
-    }
-  }, [expandedId, activeTab]);
+  // ★自動スクロール機能を削除しました
 
   useEffect(() => {
     const handleScroll = () => {
@@ -249,7 +239,7 @@ export default function ClientPage({ words, posts }) {
 
   const restartTest = () => { setTestPhase('select'); setTestQuestions([]); setCurrentQuestionIndex(0); setIsFlipped(false); };
 
-  // スワイプ検出ロジック (useRef版)
+  // スワイプ検出ロジック
   const minSwipeDistance = 50; 
 
   const onTouchStart = (e) => {
@@ -434,17 +424,14 @@ export default function ClientPage({ words, posts }) {
 
       {/* メインエリア */}
       <div className="transition-all duration-500 ease-in-out" style={{ paddingTop: activeTab === 'home' ? '0px' : (activeTab === 'list' ? (isHeaderVisible ? '260px' : '60px') : '80px') }}>
-        
-        {/* === HOME画面 === */}
         {activeTab === 'home' && <HomeView />}
-
-        {/* === 単語リスト (ID付き) === */}
+        
+        {/* 単語リスト */}
         {activeTab === 'list' && (
           <div className="p-3 space-y-3 pb-24">
             {filteredWords.length === 0 ? <div className="text-center py-20 text-gray-400">見つかりませんでした</div> : 
               filteredWords.map((item) => (
-                // ★IDを追加してスクロール可能に
-                <div id={`word-card-${item.id}`} key={item.id} onClick={() => setExpandedId(expandedId === item.id ? null : item.id)} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
+                <div key={item.id} onClick={() => setExpandedId(expandedId === item.id ? null : item.id)} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
                   <div className="p-4 flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -485,7 +472,6 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* ... (残りのコードは変更なし) ... */}
         {/* テストモード */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
