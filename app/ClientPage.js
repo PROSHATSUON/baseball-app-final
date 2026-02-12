@@ -146,19 +146,13 @@ export default function ClientPage({ words, posts }) {
     return () => { document.body.style.overflow = ''; };
   }, [blogModalPost, videoModalItem]);
 
-  // ★自動スクロールの useEffect を削除しました (これで勝手に動かなくなります)
-
+  // ★スクロールイベント制御（ヘッダーの自動開閉を廃止して位置ズレを防ぐ）
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollTop = window.scrollY;
       setShowScrollBtns(currentScrollTop > 100);
-      if (activeTab === 'list') {
-        if (currentScrollTop < 10) setIsHeaderVisible(true);
-        else if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 60) setIsHeaderVisible(false);
-      } else {
-        setIsHeaderVisible(true);
-      }
-      lastScrollTopRef.current = currentScrollTop;
+      // isHeaderVisible の自動切り替えロジックを削除し、ヘッダーを常に表示（または手動操作のみ）にする
+      // これにより、パディングの変化によるガクつきを防止
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -376,6 +370,7 @@ export default function ClientPage({ words, posts }) {
           <div className="w-16"></div>
         </div>
         
+        {/* ヘッダーの中身 (常に表示にして高さ変化を防ぐ) */}
         <div className={`overflow-hidden transition-all duration-500 ease-in-out bg-white ${(activeTab === 'list') ? 'max-h-[340px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="pb-8">
             <div className="px-3 pb-3">
@@ -398,6 +393,7 @@ export default function ClientPage({ words, posts }) {
             
             <div className="px-4 py-1 text-right text-[10px] text-gray-400">{filteredWords.length} Words Found</div>
           </div>
+          {/* 手動で閉じるボタン */}
           <div onClick={toggleHeader} className="absolute bottom-0 left-0 w-full flex justify-center pb-1 cursor-pointer bg-gradient-to-t from-white to-transparent z-10">
             <div className="flex items-center gap-1 text-gray-300 hover:text-blue-500"><span className="text-[9px] font-bold">CLOSE</span><ChevronUpIcon /></div>
           </div>
@@ -428,13 +424,13 @@ export default function ClientPage({ words, posts }) {
         {/* === HOME画面 === */}
         {activeTab === 'home' && <HomeView />}
 
-        {/* === 単語リスト (スムーズ展開・スクロールなし) === */}
+        {/* === 単語リスト === */}
         {activeTab === 'list' && (
           <div className="p-3 space-y-3 pb-24">
             {filteredWords.length === 0 ? <div className="text-center py-20 text-gray-400">見つかりませんでした</div> : 
               filteredWords.map((item) => (
                 <div key={item.id} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
-                  {/* ヘッダー部分 (タップで開閉) */}
+                  {/* ヘッダー (タップで開閉) */}
                   <div className="p-4 flex justify-between items-start cursor-pointer" onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -451,7 +447,7 @@ export default function ClientPage({ words, posts }) {
                     <div className="text-sm font-bold text-gray-600 text-right max-w-[40%] leading-snug">{item.meaning}</div>
                   </div>
 
-                  {/* ★詳細部分 (アニメーションで展開) */}
+                  {/* 詳細部分 */}
                   <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${expandedId === item.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                     <div className="overflow-hidden">
                       <div className="bg-slate-50 border-t border-gray-100 px-5 py-4 text-sm space-y-3">
@@ -479,7 +475,7 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* ... (テストモード以降は変更なし) ... */}
+        {/* ... (テストモード以降はそのまま) ... */}
         {/* テストモード */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
@@ -508,17 +504,29 @@ export default function ClientPage({ words, posts }) {
                    <div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span>Question {currentQuestionIndex + 1}</span><span>{testQuestions.length}</span></div>
                    <div className="h-2 bg-gray-200 rounded-full"><div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%` }}></div></div>
                 </div>
-                <div className="mb-6 w-full">
-                  <button onClick={nextCard} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.97] transition-all hover:bg-blue-700">{currentQuestionIndex < testQuestions.length - 1 ? 'NEXT CARD →' : 'FINISH TEST'}</button>
-                </div>
-                <div className="relative w-full aspect-square perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
-                  <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+                
+                {/* スワイプ対応カードコンテナ */}
+                <div 
+                  className="relative w-full aspect-square perspective-1000 cursor-pointer touch-pan-y" 
+                  onTouchStart={onTouchStart}
+                  onTouchMove={onTouchMove}
+                  onTouchEnd={onTouchEnd}
+                >
+                  <div 
+                    className={`relative w-full h-full transform-style-3d`} 
+                    style={{ 
+                      transition: isDragging ? 'none' : 'transform 0.3s ease',
+                      transform: `translateX(${swipeX}px) rotate(${swipeX * 0.05}deg) ${isFlipped ? 'rotateY(180deg)' : ''}`
+                    }}
+                  >
+                    {/* 表面 */}
                     <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center z-10 bg-white rounded-3xl shadow-xl border-2 border-slate-100">
-                      <span className="text-xs font-bold text-blue-500 tracking-widest mb-4">TAP TO FLIP</span>
+                      <span className="text-xs font-bold text-blue-400 tracking-widest mb-4">タップして答えを見る</span>
                       <h3 className="text-4xl font-black text-slate-800 mb-6 leading-tight break-words max-w-full">{testQuestions[currentQuestionIndex].word}</h3>
                       <div className="flex gap-2 justify-center mb-8"><span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-mono border border-gray-200" style={IPA_FONT_STYLE}>{testQuestions[currentQuestionIndex].ipa}</span></div>
                       {testQuestions[currentQuestionIndex].audioUrl && <button onClick={(e) => playAudio(e, testQuestions[currentQuestionIndex].audioUrl)} className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm border border-blue-100 active:scale-90"><SpeakerIcon /></button>}
                     </div>
+                    {/* 裏面 */}
                     <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white text-slate-800 flex flex-col items-center justify-center p-8 text-center rounded-3xl shadow-xl border-2 border-slate-100 overflow-hidden relative">
                       <div className="absolute inset-0 flex items-center justify-center p-12 z-0"><DiamondBgIcon /></div>
                       <div className="w-full h-full overflow-y-auto flex flex-col items-center justify-center scrollbar-hide relative z-10">
@@ -534,13 +542,30 @@ export default function ClientPage({ words, posts }) {
                     </div>
                   </div>
                 </div>
+
+                {/* コントロールバー */}
+                <div className="mt-8 w-full flex items-center justify-center gap-6">
+                  <button onClick={() => setIsFlipped(!isFlipped)} className="flex flex-col items-center gap-1 text-slate-400 active:text-blue-600 transition-colors">
+                    <div className="w-12 h-12 rounded-full bg-white border-2 border-slate-100 shadow-sm flex items-center justify-center active:scale-95 transition-transform"><FlipIcon /></div>
+                    <span className="text-[10px] font-bold tracking-wider">FLIP</span>
+                  </button>
+                  <div className="h-8 w-[1px] bg-slate-200"></div>
+                  <button onClick={nextCard} className="flex flex-col items-center gap-1 text-blue-600 transition-colors">
+                    <div className="w-16 h-16 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200 flex items-center justify-center active:scale-95 transition-transform"><NextArrowIcon /></div>
+                    <span className="text-[10px] font-bold tracking-wider">NEXT</span>
+                  </button>
+                </div>
+                <div className="mt-6 flex items-center gap-2 text-gray-400 animate-pulse">
+                  <HandSwipeIcon />
+                  <span className="text-[10px] font-bold">左へスワイプして次へ</span>
+                </div>
               </div>
             ) : (
               <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 animate-fadeIn py-10">
                 <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mb-4 shadow-sm">🎉</div>
                 <h2 className="text-3xl font-black text-slate-800">Test Completed!</h2>
                 <div className="flex flex-col w-full max-w-xs gap-3">
-                  <button onClick={restartTest} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95">もう一度テストする</button>
+                  <button onClick={restartTest} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 flex items-center justify-center gap-2"><RefreshIcon />もう一度テストする</button>
                   <button onClick={() => setActiveTab('home')} className="text-gray-400 font-bold text-sm py-2">HOMEに戻る</button>
                 </div>
               </div>
