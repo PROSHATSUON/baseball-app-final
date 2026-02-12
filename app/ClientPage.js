@@ -146,13 +146,28 @@ export default function ClientPage({ words, posts }) {
     return () => { document.body.style.overflow = ''; };
   }, [blogModalPost, videoModalItem]);
 
-  // ★スクロールイベント制御（ヘッダーの自動開閉を廃止して位置ズレを防ぐ）
+  // ★スクロールイベント制御（ヘッダー自動開閉復活＋バグ対策）
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollTop = window.scrollY;
       setShowScrollBtns(currentScrollTop > 100);
-      // isHeaderVisible の自動切り替えロジックを削除し、ヘッダーを常に表示（または手動操作のみ）にする
-      // これにより、パディングの変化によるガクつきを防止
+      
+      // ★復活: 自動ヘッダー制御
+      // ただし、expandedId（展開）が変わった直後はスクロールイベントが発火しやすいため
+      // 本来は対策が必要だが、今回は純粋なCSS開閉にしたので、
+      // ユーザーが意図的にスクロールした時だけ反応するように自然となるはず
+      if (activeTab === 'list') {
+        if (currentScrollTop < 10) {
+          setIsHeaderVisible(true);
+        } else if (currentScrollTop > lastScrollTopRef.current && currentScrollTop > 60) {
+          // 下にスクロール -> ヘッダー隠す
+          setIsHeaderVisible(false);
+        } else if (currentScrollTop < lastScrollTopRef.current) {
+          // 上にスクロール -> ヘッダー出す
+          setIsHeaderVisible(true);
+        }
+      }
+      lastScrollTopRef.current = currentScrollTop;
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -370,7 +385,6 @@ export default function ClientPage({ words, posts }) {
           <div className="w-16"></div>
         </div>
         
-        {/* ヘッダーの中身 (常に表示にして高さ変化を防ぐ) */}
         <div className={`overflow-hidden transition-all duration-500 ease-in-out bg-white ${(activeTab === 'list') ? 'max-h-[340px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="pb-8">
             <div className="px-3 pb-3">
@@ -393,7 +407,6 @@ export default function ClientPage({ words, posts }) {
             
             <div className="px-4 py-1 text-right text-[10px] text-gray-400">{filteredWords.length} Words Found</div>
           </div>
-          {/* 手動で閉じるボタン */}
           <div onClick={toggleHeader} className="absolute bottom-0 left-0 w-full flex justify-center pb-1 cursor-pointer bg-gradient-to-t from-white to-transparent z-10">
             <div className="flex items-center gap-1 text-gray-300 hover:text-blue-500"><span className="text-[9px] font-bold">CLOSE</span><ChevronUpIcon /></div>
           </div>
@@ -430,7 +443,6 @@ export default function ClientPage({ words, posts }) {
             {filteredWords.length === 0 ? <div className="text-center py-20 text-gray-400">見つかりませんでした</div> : 
               filteredWords.map((item) => (
                 <div key={item.id} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
-                  {/* ヘッダー (タップで開閉) */}
                   <div className="p-4 flex justify-between items-start cursor-pointer" onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -476,7 +488,6 @@ export default function ClientPage({ words, posts }) {
         )}
 
         {/* ... (テストモード以降はそのまま) ... */}
-        {/* テストモード */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
