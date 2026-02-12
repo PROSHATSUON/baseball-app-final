@@ -136,6 +136,8 @@ export default function ClientPage({ words, posts }) {
   
   const audioRef = useRef(null);
   const lastScrollTopRef = useRef(0);
+  // ★インタラクション中（タップ直後）かどうかを判定するRef
+  const isInteracting = useRef(false);
   
   const GENRES = ["ALL", "全般", "打撃・走塁", "投球・守備", "成績・契約", "表現"];
   const LEVELS = ["ALL", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5"];
@@ -146,16 +148,18 @@ export default function ClientPage({ words, posts }) {
     return () => { document.body.style.overflow = ''; };
   }, [blogModalPost, videoModalItem]);
 
-  // ★スクロールイベント制御（ヘッダー自動開閉復活＋バグ対策）
+  // ★スクロールイベント制御（誤作動防止ロジック入り）
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollTop = window.scrollY;
       setShowScrollBtns(currentScrollTop > 100);
       
-      // ★復活: 自動ヘッダー制御
-      // ただし、expandedId（展開）が変わった直後はスクロールイベントが発火しやすいため
-      // 本来は対策が必要だが、今回は純粋なCSS開閉にしたので、
-      // ユーザーが意図的にスクロールした時だけ反応するように自然となるはず
+      // インタラクション中（単語開閉直後）はヘッダー制御をスキップする
+      if (isInteracting.current) {
+        lastScrollTopRef.current = currentScrollTop;
+        return;
+      }
+
       if (activeTab === 'list') {
         if (currentScrollTop < 10) {
           setIsHeaderVisible(true);
@@ -172,6 +176,20 @@ export default function ClientPage({ words, posts }) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [activeTab]);
+
+  // ★単語開閉時の処理
+  const toggleExpand = (id) => {
+    // 1. スクロール判定を一時的に無効化
+    isInteracting.current = true;
+    
+    // 2. 開閉
+    setExpandedId(expandedId === id ? null : id);
+
+    // 3. 0.5秒後にスクロール判定を再開
+    setTimeout(() => {
+      isInteracting.current = false;
+    }, 500);
+  };
 
   const toggleHeader = () => setIsHeaderVisible(!isHeaderVisible);
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -442,8 +460,9 @@ export default function ClientPage({ words, posts }) {
           <div className="p-3 space-y-3 pb-24">
             {filteredWords.length === 0 ? <div className="text-center py-20 text-gray-400">見つかりませんでした</div> : 
               filteredWords.map((item) => (
+                // ★クリックで開閉（センサー停止ロジック呼び出し）
                 <div key={item.id} className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${expandedId === item.id ? 'border-blue-400 shadow-md ring-1 ring-blue-100' : 'border-gray-200 shadow-sm active:scale-[0.99]'}`}>
-                  <div className="p-4 flex justify-between items-start cursor-pointer" onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}>
+                  <div className="p-4 flex justify-between items-start cursor-pointer" onClick={() => toggleExpand(item.id)}>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-lg font-extrabold text-slate-800 leading-tight">{item.word}</h3>
@@ -459,7 +478,6 @@ export default function ClientPage({ words, posts }) {
                     <div className="text-sm font-bold text-gray-600 text-right max-w-[40%] leading-snug">{item.meaning}</div>
                   </div>
 
-                  {/* 詳細部分 */}
                   <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${expandedId === item.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                     <div className="overflow-hidden">
                       <div className="bg-slate-50 border-t border-gray-100 px-5 py-4 text-sm space-y-3">
@@ -487,7 +505,8 @@ export default function ClientPage({ words, posts }) {
           </div>
         )}
 
-        {/* ... (テストモード以降はそのまま) ... */}
+        {/* ... (残りのコードは変更なし) ... */}
+        {/* テストモード */}
         {activeTab === 'test' && (
           <div className="p-4 min-h-full flex flex-col">
             {testPhase === 'select' ? (
